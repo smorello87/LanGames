@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Wordle - LanGames</title>
+  <link rel="stylesheet" href="css/styles-v3.css">
+  <link rel="stylesheet" href="css/games-v3.css">
+  <link rel="stylesheet" href="css/adaptive-v3.css">
+  <style>
+    .game-section {
+      text-align: center;
+      margin: var(--spacing-lg) 0;
+    }
+    #wordleFeedback {
+      margin-top: var(--spacing-lg);
+      font-weight: var(--font-weight-bold);
+      font-size: var(--font-size-large);
+      min-height: 30px;
+    }
+    #guessInput {
+      text-transform: uppercase;
+      width: 150px;
+      text-align: center;
+      font-weight: var(--font-weight-bold);
+    }
+    .session-info {
+      background: var(--color-gray-100);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius-small);
+      margin-bottom: var(--spacing-lg);
+      text-align: center;
+    }
+    .session-info span {
+      display: inline-block;
+      margin: 0 var(--spacing-md);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-italian-green);
+    }
+  </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-QJL9EQGT3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-QJL9EQGT3Y');
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>LanGames - Wordle</h1>
+    </div>
+  </header>
+  <nav>
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
+    <div class="menu-items">
+      <a href="index.html">Home</a>
+      <a href="llm-settings.html">Settings</a>
+      <div class="dropdown" onclick="toggleDropdown(event)">
+        <a href="#">Games</a>
+        <div class="dropdown-content">
+          <a href="wordle-adaptive.html" class="active">Wordle</a>
+          <a href="memory-adaptive.html">Memory Game</a>
+          <a href="fiore-adaptive.html">Flower</a>
+          <a href="tenses-adaptive.html">Verb Tenses Wheel</a>
+          <a href="reflexives-adaptive.html">Reflexive Verbs Wheel</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <script>
+    function toggleMenu() {
+      const menu = document.querySelector('nav .menu-items');
+      menu.classList.toggle('show-menu');
+    }
+
+    function toggleDropdown(event) {
+      // Only toggle on mobile (when hamburger is visible)
+      if (window.innerWidth <= 600) {
+        event.stopPropagation();
+        const dropdown = event.currentTarget;
+        dropdown.classList.toggle('active');
+      }
+    }
+  </script>
+
+  <main class="container">
+    <div id="sessionInfo" class="session-info"></div>
+
+    <!-- Level Selection Section -->
+    <section id="levelSelection" class="game-section">
+      <h2>Select Difficulty Level</h2>
+      <select id="levelSelect">
+        <option value="beginner">Beginner</option>
+        <option value="intermediate">Intermediate</option>
+        <option value="advanced">Advanced</option>
+      </select>
+      <br>
+      <button onclick="startGame()">Start Game</button>
+      <br><br>
+      <a href="llm-settings.html">Back to Settings</a>
+    </section>
+
+    <!-- Wordle Game Section -->
+    <section id="wordleGame" class="game-section" style="display:none;">
+      <h2 id="gameTitle"></h2>
+      <div id="wordleBoard" class="wordle-board"></div>
+      <br>
+      <input type="text" id="guessInput" maxlength="5" placeholder="Enter guess">
+      <button onclick="submitGuess()">Submit</button>
+      <div id="wordleFeedback"></div>
+      <button onclick="resetGame()">New Game</button>
+      <br><br>
+      <a href="llm-settings.html">Back to Settings</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-text">
+      <p>
+        Based on <a href="https://beatricecarnelutti.com/impariamo">Beatrice Carnelutti's Impariamo l'Italiano</a>
+      </p>
+      <p>
+        This tool was developed as part of the CUNY AI Lab, a project coordinated by the <a href="https://ashp.cuny.edu" target="_blank" rel="noopener">American Social History Project/Center for Media and Learning</a>, <a href="https://cuny.is/gcdi" target="_blank" rel="noopener">Graduate Center Digital Initiatives</a>, the <a href="https://library.gc.cuny.edu/" target="_blank" rel="noopener">Mina Rees Library</a>, and the <a href="https://tlc.commons.gc.cuny.edu/" target="_blank" rel="noopener">Teaching and Learning Center</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Load JavaScript modules -->
+  <script src="js/game-content-loader.js"></script>
+
+  <script>
+    let customWords = null;
+    let targetWord = "";
+    const maxGuesses = 6;
+    let currentGuess = 0;
+    const board = document.getElementById("wordleBoard");
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCustomContent();
+      displaySessionInfo();
+    });
+
+    function loadCustomContent() {
+      const content = GameContentLoader.loadContent();
+      if (content && content.wordle && content.wordle.length > 0) {
+        // Content is generated for a single difficulty level
+        // So we use the same words for all difficulty selections
+        const wordArray = content.wordle;
+        customWords = {
+          beginner: wordArray,
+          intermediate: wordArray,
+          advanced: wordArray
+        };
+        console.log('Custom content loaded successfully:', wordArray.length, 'words');
+      } else {
+        // No fallback - redirect to settings
+        alert('No content available. Please go to Settings and generate content first.');
+        window.location.href = 'llm-settings.html';
+        return;
+      }
+    }
+
+    function displaySessionInfo() {
+      const contentInfo = GameContentLoader.getContentInfo();
+      const infoDiv = document.getElementById('sessionInfo');
+
+      if (contentInfo) {
+        infoDiv.innerHTML = `
+          <span>Language: ${contentInfo.language}</span>
+          <span>Difficulty: ${contentInfo.difficulty}</span>
+        `;
+      } else {
+        infoDiv.innerHTML = '<span>Using default Italian content</span>';
+      }
+    }
+
+    function chooseTarget() {
+      const level = document.getElementById("levelSelect").value;
+
+      if (!customWords || !customWords[level]) {
+        alert('No content available. Please go to Settings and generate content first.');
+        window.location.href = 'llm-settings.html';
+        return;
+      }
+
+      const pool = customWords[level];
+      const randomIndex = Math.floor(Math.random() * pool.length);
+      targetWord = pool[randomIndex].toUpperCase();
+      console.log("Target Word:", targetWord);
+    }
+
+    function initBoard() {
+      board.innerHTML = "";
+      for (let r = 0; r < maxGuesses; r++) {
+        for (let c = 0; c < 5; c++) {
+          const tile = document.createElement("div");
+          tile.classList.add("tile", "default");
+          tile.setAttribute("data-row", r);
+          tile.setAttribute("data-col", c);
+          board.appendChild(tile);
+        }
+      }
+    }
+
+    function submitGuess() {
+      const input = document.getElementById("guessInput");
+      let guess = input.value.trim().toUpperCase();
+      if (guess.length !== 5) {
+        document.getElementById("wordleFeedback").innerText = "Please enter exactly 5 letters.";
+        return;
+      }
+      document.getElementById("wordleFeedback").innerText = "";
+      input.value = "";
+      processGuess(guess);
+    }
+
+    function processGuess(guess) {
+      const rowTiles = document.querySelectorAll(`.tile[data-row='${currentGuess}']`);
+      let targetLetters = targetWord.split('');
+      let colors = Array(5).fill("gray");
+
+      // First pass: green letters
+      for (let i = 0; i < 5; i++) {
+        if (guess[i] === targetWord[i]) {
+          colors[i] = "green";
+          targetLetters[i] = null;
+        }
+      }
+
+      // Second pass: yellow letters
+      for (let i = 0; i < 5; i++) {
+        if (colors[i] === "green") continue;
+        const index = targetLetters.indexOf(guess[i]);
+        if (index !== -1) {
+          colors[i] = "yellow";
+          targetLetters[index] = null;
+        }
+      }
+
+      // Update the tiles
+      for (let i = 0; i < 5; i++) {
+        rowTiles[i].innerText = guess[i];
+        rowTiles[i].classList.remove("default");
+        rowTiles[i].classList.add(colors[i]);
+      }
+
+      currentGuess++;
+      if (guess === targetWord) {
+        document.getElementById("wordleFeedback").innerText = "Congratulations! You guessed correctly.";
+      } else if (currentGuess === maxGuesses) {
+        document.getElementById("wordleFeedback").innerText = "Game over! The word was: " + targetWord;
+      }
+    }
+
+    function resetGame() {
+      currentGuess = 0;
+      chooseTarget();
+      initBoard();
+      document.getElementById("wordleFeedback").innerText = "";
+      document.getElementById("guessInput").value = "";
+    }
+
+    function startGame() {
+      document.getElementById("levelSelection").style.display = "none";
+      document.getElementById("wordleGame").style.display = "block";
+      const level = document.getElementById("levelSelect").value;
+      document.getElementById("gameTitle").innerText = "Wordle Game (" + level.charAt(0).toUpperCase() + level.slice(1) + ")";
+      currentGuess = 0;
+      chooseTarget();
+      initBoard();
+    }
+
+    // Allow Enter key to submit guess
+    document.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && document.getElementById('wordleGame').style.display !== 'none') {
+        submitGuess();
+      }
+    });
+  </script>
+</body>
+</html>

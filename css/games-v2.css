@@ -1,0 +1,774 @@
+/**
+ * Impariamo l'Italiano! - Game-Specific Styles
+ * =============================================
+ * Styles specific to game components and interactions
+ * This file should be included after styles.css
+ */
+
+/* ===========================
+   Common Game Elements
+   =========================== */
+.game-board {
+  margin: var(--spacing-xl) auto;
+  animation: fadeIn 0.6s ease;
+}
+
+.game-controls {
+  display: flex;
+  gap: var(--spacing-md);
+  justify-content: center;
+  flex-wrap: wrap;
+  margin: var(--spacing-lg) 0;
+}
+
+.game-status {
+  text-align: center;
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+  margin: var(--spacing-lg) 0;
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-medium);
+  background: var(--color-gray-100);
+  transition: all var(--transition-medium);
+}
+
+.game-status.success {
+  background: rgba(106, 170, 100, 0.1);
+  color: var(--color-green-light);
+  border: 2px solid var(--color-green-light);
+}
+
+.game-status.error {
+  background: rgba(206, 43, 55, 0.1);
+  color: var(--color-italian-red);
+  border: 2px solid var(--color-italian-red);
+}
+
+.score-display {
+  display: flex;
+  justify-content: space-around;
+  margin: var(--spacing-lg) 0;
+  padding: var(--spacing-md);
+  background: var(--color-gray-100);
+  border-radius: var(--border-radius-medium);
+  font-weight: var(--font-weight-bold);
+}
+
+.score-display span {
+  color: var(--color-italian-green);
+  font-size: var(--font-size-large);
+}
+
+/* ===========================
+   Spinning Wheel (Tenses & Reflexives)
+   =========================== */
+.wheel-container {
+  position: relative;
+  margin: var(--spacing-xl) auto;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+canvas {
+  display: block;
+  margin: 0 auto;
+  border: 3px solid var(--color-gray-300);
+  border-radius: var(--border-radius-round);
+  background: linear-gradient(145deg, #fafafa, #f0f0f0);
+  box-shadow:
+    0 10px 30px rgba(0, 0, 0, 0.1),
+    inset 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform var(--transition-slow);
+  width: 500px;
+  height: 500px;
+}
+
+canvas.spinning {
+  animation: spin 4s cubic-bezier(0.17, 0.67, 0.83, 0.67);
+}
+
+.wheel-pointer {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 20px solid transparent;
+  border-right: 20px solid transparent;
+  border-top: 30px solid var(--color-italian-red);
+  z-index: 1;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2));
+}
+
+.verb-display {
+  text-align: center;
+  margin: var(--spacing-lg) 0;
+  padding: var(--spacing-lg);
+  background: linear-gradient(135deg, var(--color-gray-100) 0%, var(--color-italian-white) 100%);
+  border-radius: var(--border-radius-medium);
+  border: 2px solid var(--color-italian-green);
+}
+
+.verb-display h3 {
+  font-size: var(--font-size-xlarge);
+  color: var(--color-italian-green);
+  margin-bottom: var(--spacing-sm);
+}
+
+.verb-display .subject {
+  font-size: var(--font-size-large);
+  color: var(--color-italian-red);
+  font-weight: var(--font-weight-bold);
+}
+
+/* Wheel game layout - ensure vertical stacking */
+#spin canvas,
+#spin button,
+#spin #spinResult,
+#spin #conjugationInput,
+#spin #spinFeedback {
+  display: block;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+#spin button {
+  margin-top: var(--spacing-lg);
+  margin-bottom: var(--spacing-md);
+}
+
+/* ===========================
+   Memory Game
+   =========================== */
+.memory-board {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(90px, 1fr));
+  gap: var(--spacing-sm);
+  max-width: 700px;
+  margin: var(--spacing-xl) auto;
+  padding: var(--spacing-md);
+}
+
+.memory-card,
+.card {
+  aspect-ratio: 1;
+  background: linear-gradient(135deg, var(--color-italian-red) 0%, var(--color-red-dark) 100%);
+  color: var(--color-italian-white);
+  border-radius: var(--border-radius-medium);
+  padding: var(--spacing-xs);
+  cursor: pointer;
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  user-select: none;
+  transition: all var(--transition-medium);
+  position: relative;
+  box-shadow: var(--shadow-small);
+  overflow: hidden;
+
+  /* Allow text to wrap at word boundaries for multi-word phrases */
+  white-space: normal;
+  overflow-wrap: break-word;
+  word-break: normal;
+  hyphens: manual;
+
+  /* Smaller dynamic font sizing - scales down more aggressively for longer text */
+  /* This allows cards to remain small even with multi-word phrases */
+  font-size: clamp(0.55rem, 1.8vw, 0.85rem);
+  line-height: 1.15;
+}
+
+.memory-card::before,
+.card::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255, 255, 255, 0.1) 0%, transparent 70%);
+  animation: shimmer 3s infinite;
+}
+
+.memory-card:hover:not(.flipped):not(.matched),
+.card:hover:not(.flipped):not(.matched) {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: var(--shadow-medium);
+}
+
+.memory-card.flipped,
+.card.flipped {
+  background: linear-gradient(135deg, var(--color-italian-white) 0%, var(--color-gray-100) 100%);
+  color: var(--color-gray-700);
+  border: 2px solid var(--color-italian-green);
+  /* Explicitly reset any transforms to fix text mirroring issue */
+  transform: none !important;
+  transform-style: flat !important;
+  backface-visibility: visible !important;
+  direction: ltr !important;
+  unicode-bidi: normal !important;
+  writing-mode: horizontal-tb !important;
+}
+
+.memory-card.matched,
+.card.matched {
+  background: linear-gradient(135deg, var(--color-green-light) 0%, var(--color-italian-green) 100%);
+  color: var(--color-italian-white);
+  cursor: default;
+  animation: matchPulse 0.6s ease;
+  transform: scale(0.95);
+  /* Ensure text displays correctly in matched cards */
+  transform-style: flat !important;
+  backface-visibility: visible !important;
+  direction: ltr !important;
+}
+
+@keyframes shimmer {
+  0%, 100% {
+    transform: rotate(0deg);
+  }
+  50% {
+    transform: rotate(180deg);
+  }
+}
+
+@keyframes matchPulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+/* ===========================
+   Wordle Game
+   =========================== */
+.wordle-board {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: var(--spacing-xs);
+  max-width: 350px;
+  margin: var(--spacing-xl) auto;
+}
+
+.wordle-tile,
+.tile {
+  aspect-ratio: 1;
+  border: 2px solid var(--color-gray-300);
+  border-radius: var(--border-radius-small);
+  font-size: var(--font-size-xlarge);
+  font-weight: var(--font-weight-bold);
+  text-align: center;
+  text-transform: uppercase;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all var(--transition-medium);
+  background: var(--color-italian-white);
+  color: var(--color-gray-700);
+  position: relative;
+  overflow: hidden;
+}
+
+.wordle-tile.filled,
+.tile.filled {
+  animation: pop 0.2s ease;
+  border-color: var(--color-gray-500);
+}
+
+.wordle-tile.correct,
+.tile.green {
+  background: var(--color-green-light);
+  color: var(--color-italian-white);
+  border-color: var(--color-green-light);
+  animation: flip 0.6s ease;
+}
+
+.wordle-tile.present,
+.tile.yellow {
+  background: #c9b458;
+  color: var(--color-italian-white);
+  border-color: #c9b458;
+  animation: flip 0.6s ease 0.1s;
+}
+
+.wordle-tile.absent,
+.tile.gray {
+  background: var(--color-gray-500);
+  color: var(--color-italian-white);
+  border-color: var(--color-gray-500);
+  animation: flip 0.6s ease 0.2s;
+}
+
+@keyframes pop {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+@keyframes flip {
+  0% {
+    transform: rotateX(0);
+  }
+  50% {
+    transform: rotateX(90deg);
+  }
+  100% {
+    transform: rotateX(0);
+  }
+}
+
+.keyboard {
+  max-width: 500px;
+  margin: var(--spacing-xl) auto;
+}
+
+.keyboard-row {
+  display: flex;
+  justify-content: center;
+  margin: var(--spacing-xs) 0;
+  gap: var(--spacing-xs);
+}
+
+.keyboard-key {
+  background: var(--color-gray-200);
+  border: 1px solid var(--color-gray-300);
+  border-radius: var(--border-radius-small);
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-size-base);
+  font-weight: var(--font-weight-bold);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  text-transform: uppercase;
+  min-width: 30px;
+}
+
+.keyboard-key:hover {
+  background: var(--color-gray-300);
+  transform: translateY(-2px);
+}
+
+.keyboard-key:active {
+  transform: translateY(0);
+}
+
+.keyboard-key.correct {
+  background: var(--color-green-light);
+  color: var(--color-italian-white);
+  border-color: var(--color-green-light);
+}
+
+.keyboard-key.present {
+  background: #c9b458;
+  color: var(--color-italian-white);
+  border-color: #c9b458;
+}
+
+.keyboard-key.absent {
+  background: var(--color-gray-500);
+  color: var(--color-italian-white);
+  border-color: var(--color-gray-500);
+}
+
+/* ===========================
+   Fiore (Flower) Game
+   =========================== */
+.fiore-game {
+  text-align: center;
+  padding: var(--spacing-lg);
+}
+
+#image-container {
+  margin: var(--spacing-lg) 0;
+  position: relative;
+  display: inline-block;
+}
+
+#image-container img {
+  max-width: 200px;
+  width: 100%;
+  height: auto;
+  border-radius: var(--border-radius-medium);
+  box-shadow: var(--shadow-medium);
+  transition: all var(--transition-medium);
+}
+
+#image-container img.blooming {
+  animation: bloom 0.6s ease;
+}
+
+@keyframes bloom {
+  0% {
+    transform: scale(1) rotate(0deg);
+  }
+  50% {
+    transform: scale(1.1) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+#letters {
+  display: grid;
+  grid-template-columns: repeat(13, 1fr);
+  gap: var(--spacing-xs);
+  max-width: 700px;
+  margin: var(--spacing-lg) auto;
+  padding: var(--spacing-md);
+}
+
+#letters button {
+  width: 100%;
+  aspect-ratio: 1;
+  padding: var(--spacing-xs);
+  font-size: var(--font-size-base);
+  min-width: unset;
+}
+
+#letters button:disabled {
+  background: var(--color-gray-300);
+  color: var(--color-gray-500);
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+#word {
+  font-size: var(--font-size-xxlarge);
+  letter-spacing: 0.3em;
+  margin: var(--spacing-lg) 0;
+  font-weight: var(--font-weight-bold);
+  color: var(--color-italian-green);
+  text-transform: uppercase;
+}
+
+.word-placeholder {
+  display: inline-block;
+  width: 1.5em;
+  height: 2px;
+  background: var(--color-gray-400);
+  margin: 0 0.1em;
+  vertical-align: middle;
+  transition: all var(--transition-fast);
+}
+
+.word-placeholder.filled {
+  background: var(--color-italian-green);
+  animation: pop 0.3s ease;
+}
+
+/* ===========================
+   Crosswords
+   =========================== */
+.crossword-container {
+  display: flex;
+  gap: var(--spacing-xl);
+  margin: var(--spacing-xl) 0;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.crossword-grid {
+  display: grid;
+  gap: 2px;
+  background: var(--color-gray-400);
+  padding: 2px;
+  border-radius: var(--border-radius-small);
+  box-shadow: var(--shadow-medium);
+}
+
+.crossword-cell {
+  width: 40px;
+  height: 40px;
+  background: var(--color-italian-white);
+  border: 1px solid var(--color-gray-300);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: var(--font-size-large);
+  font-weight: var(--font-weight-bold);
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  position: relative;
+}
+
+.crossword-cell:hover {
+  background: var(--color-gray-100);
+}
+
+.crossword-cell.active {
+  background: rgba(0, 140, 69, 0.1);
+  border-color: var(--color-italian-green);
+}
+
+.crossword-cell.black {
+  background: var(--color-gray-700);
+  cursor: default;
+}
+
+.crossword-cell .cell-number {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  font-size: 10px;
+  font-weight: var(--font-weight-normal);
+  color: var(--color-gray-600);
+}
+
+.clues-container {
+  flex: 1;
+  min-width: 250px;
+}
+
+.clues-section {
+  margin-bottom: var(--spacing-lg);
+}
+
+.clues-section h3 {
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-xs);
+  border-bottom: 2px solid var(--color-italian-green);
+}
+
+.clue-item {
+  padding: var(--spacing-sm);
+  margin: var(--spacing-xs) 0;
+  border-radius: var(--border-radius-small);
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.clue-item:hover {
+  background: var(--color-gray-100);
+  padding-left: var(--spacing-md);
+}
+
+.clue-item.active {
+  background: rgba(0, 140, 69, 0.1);
+  border-left: 3px solid var(--color-italian-green);
+}
+
+.clue-item.solved {
+  color: var(--color-gray-500);
+  text-decoration: line-through;
+}
+
+/* ===========================
+   Tool Descriptions (Homepage)
+   =========================== */
+.tool {
+  margin-bottom: var(--spacing-lg);
+  padding: var(--spacing-md);
+  border-left: 4px solid var(--color-italian-green);
+  background: linear-gradient(90deg, rgba(0, 140, 69, 0.05) 0%, transparent 100%);
+  border-radius: var(--border-radius-small);
+  transition: all var(--transition-medium);
+}
+
+.tool:hover {
+  transform: translateX(5px);
+  box-shadow: var(--shadow-small);
+}
+
+.tool h3 {
+  margin-bottom: var(--spacing-xs);
+  color: var(--color-italian-green);
+}
+
+.tool p {
+  margin: var(--spacing-xs) 0;
+  line-height: 1.6;
+}
+
+.tool a {
+  font-weight: var(--font-weight-bold);
+  color: var(--color-italian-green);
+  text-decoration: none;
+  position: relative;
+}
+
+.tool a::after {
+  content: '→';
+  margin-left: 5px;
+  transition: margin-left var(--transition-fast);
+}
+
+.tool a:hover::after {
+  margin-left: 10px;
+}
+
+/* ===========================
+   Responsive Game Styles
+   =========================== */
+@media (max-width: 768px) {
+  canvas {
+    display: block;
+    margin: 0 auto;
+    width: 400px;
+    height: 400px;
+  }
+
+  .memory-board {
+    grid-template-columns: repeat(auto-fit, minmax(85px, 1fr));
+    gap: var(--spacing-xs);
+  }
+
+  .wordle-board {
+    max-width: 300px;
+  }
+
+  .crossword-container {
+    flex-direction: column;
+  }
+
+  .crossword-cell {
+    width: 35px;
+    height: 35px;
+    font-size: var(--font-size-base);
+  }
+}
+
+@media (max-width: 600px) {
+  canvas {
+    display: block;
+    margin: 0 auto;
+    width: 300px;
+    height: 300px;
+  }
+
+  .game-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .game-controls button {
+    width: 100%;
+    /* Ensure adequate touch targets */
+    min-height: 44px;
+    padding: var(--spacing-md) var(--spacing-lg);
+  }
+
+  .memory-board {
+    grid-template-columns: repeat(auto-fit, minmax(70px, 1fr));
+    gap: 5px;
+    max-width: 100%;
+  }
+
+  .memory-card,
+  .card {
+    /* Smaller font sizing for mobile to fit more cards on screen */
+    font-size: clamp(0.5rem, 2.2vw, 0.75rem);
+    padding: 4px;
+    /* Allow proper text wrapping on mobile too */
+    white-space: normal;
+    overflow-wrap: break-word;
+    line-height: 1.1;
+  }
+
+  .wordle-tile,
+  .tile {
+    font-size: var(--font-size-large);
+  }
+
+  #letters {
+    grid-template-columns: repeat(9, 1fr);
+  }
+
+  #image-container img {
+    max-width: 150px;
+  }
+
+  .keyboard-key {
+    padding: var(--spacing-sm) var(--spacing-md);
+    font-size: var(--font-size-small);
+    /* Improved touch targets for keyboard keys */
+    min-width: 32px;
+    min-height: 40px;
+  }
+
+  .crossword-cell {
+    /* Increased size for better touch targets on mobile */
+    width: 36px;
+    height: 36px;
+    font-size: var(--font-size-small);
+  }
+}
+
+/* ===========================
+   Loading States
+   =========================== */
+.loading {
+  display: inline-block;
+  width: 20px;
+  height: 20px;
+  border: 3px solid var(--color-gray-300);
+  border-top-color: var(--color-italian-green);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin: var(--spacing-md) auto;
+}
+
+.skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--color-gray-200) 25%,
+    var(--color-gray-100) 50%,
+    var(--color-gray-200) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmerSkeleton 1.5s infinite;
+  border-radius: var(--border-radius-small);
+}
+
+@keyframes shimmerSkeleton {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+/* ===========================
+   Success/Error States
+   =========================== */
+.success-message {
+  background: linear-gradient(135deg, rgba(106, 170, 100, 0.1) 0%, rgba(0, 140, 69, 0.1) 100%);
+  border: 2px solid var(--color-italian-green);
+  color: var(--color-green-dark);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-medium);
+  margin: var(--spacing-md) 0;
+  animation: fadeInDown 0.4s ease;
+}
+
+.error-message {
+  background: linear-gradient(135deg, rgba(206, 43, 55, 0.1) 0%, rgba(232, 93, 108, 0.1) 100%);
+  border: 2px solid var(--color-italian-red);
+  color: var(--color-red-dark);
+  padding: var(--spacing-md);
+  border-radius: var(--border-radius-medium);
+  margin: var(--spacing-md) 0;
+  animation: shake 0.5s ease;
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+  10%, 30%, 50%, 70%, 90% {
+    transform: translateX(-5px);
+  }
+  20%, 40%, 60%, 80% {
+    transform: translateX(5px);
+  }
+}

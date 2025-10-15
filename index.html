@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>LanGames - Multilingual Learning Games</title>
+  <link rel="stylesheet" href="css/styles-v3.css">
+  <link rel="stylesheet" href="css/adaptive-v3.css">
+  <style>
+    .game-section {
+      text-align: center;
+      margin: var(--spacing-lg) 0;
+    }
+
+    .hero-section {
+      background: linear-gradient(135deg, var(--color-italian-green) 0%, #006a36 100%);
+      color: white;
+      padding: var(--spacing-xxl) var(--spacing-lg);
+      border-radius: 12px;
+      margin-bottom: var(--spacing-xxl);
+      text-align: center;
+    }
+
+    .hero-section h2 {
+      color: white;
+      margin-top: 0;
+      font-size: 2.5em;
+    }
+
+    .hero-section p {
+      font-size: 1.2em;
+      margin: var(--spacing-lg) 0;
+      max-width: 800px;
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    .feature-card {
+      background: white;
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: var(--spacing-lg);
+      text-align: center;
+      transition: transform 0.2s, box-shadow 0.2s;
+    }
+
+    .feature-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .feature-icon {
+      font-size: 3em;
+      margin-bottom: var(--spacing-sm);
+    }
+
+    .feature-card h3 {
+      color: var(--color-italian-green);
+      margin: var(--spacing-sm) 0;
+    }
+
+    .cta-section {
+      background: #f9f9f9;
+      padding: var(--spacing-xxl);
+      border-radius: 12px;
+      text-align: center;
+      margin: var(--spacing-xxl) 0;
+    }
+
+    /* CTA Button - High contrast for accessibility */
+    .cta-button {
+      display: inline-block;
+      background: #002D72; /* Dark blue for better contrast */
+      color: #FFFFFF;
+      padding: 15px 40px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 1.2em;
+      font-weight: bold;
+      margin: var(--spacing-sm);
+      transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
+    }
+
+    .cta-button:hover {
+      background: #001F4C; /* Even darker on hover */
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
+      transform: translateY(-2px);
+    }
+
+    .cta-button.secondary {
+      background: var(--color-italian-red);
+    }
+
+    .cta-button.secondary:hover {
+      background: #a82230;
+    }
+
+    .languages-showcase {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: var(--spacing-sm);
+      margin: var(--spacing-lg) 0;
+      font-size: 2em;
+    }
+
+    .info-box {
+      background: #fff3cd;
+      border: 2px solid #ffc107;
+      border-radius: 8px;
+      padding: var(--spacing-lg);
+      margin: var(--spacing-lg) 0;
+    }
+
+    .info-box h3 {
+      margin-top: 0;
+      color: #856404;
+    }
+
+    .step-number {
+      background: #008C45;  /* Italian green - hardcoded for visibility */
+      color: #FFFFFF;       /* White text - hardcoded for contrast */
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.5em;
+      font-weight: bold;
+      margin-bottom: var(--spacing-sm);
+    }
+  </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-QJL9EQGT3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-QJL9EQGT3Y');
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>LanGames</h1>
+    </div>
+  </header>
+  <nav>
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
+    <div class="menu-items">
+      <a href="index.html" class="active" aria-current="page">Home</a>
+      <a href="llm-settings.html">Settings</a>
+      <div class="dropdown" onclick="toggleDropdown(event)">
+        <a href="#">Games</a>
+        <div class="dropdown-content">
+          <a href="wordle-adaptive.html">Wordle</a>
+          <a href="memory-adaptive.html">Memory Game</a>
+          <a href="fiore-adaptive.html">Flower</a>
+          <a href="tenses-adaptive.html">Verb Tenses Wheel</a>
+          <a href="reflexives-adaptive.html">Reflexive Verbs Wheel</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <script>
+    function toggleMenu() {
+      const menu = document.querySelector('nav .menu-items');
+      menu.classList.toggle('show-menu');
+    }
+
+    function toggleDropdown(event) {
+      // Only toggle on mobile (when hamburger is visible)
+      if (window.innerWidth <= 600) {
+        event.stopPropagation();
+        const dropdown = event.currentTarget;
+        dropdown.classList.toggle('active');
+      }
+    }
+  </script>
+
+  <main class="container">
+    <!-- What is This Section -->
+    <section class="intro-section">
+      <p class="intro-text">
+        LanGames is an AI-powered language learning platform. Generate custom vocabulary, verb conjugations, and educational content for 10 languages using AI. Perfect for teachers and self-directed learners.
+      </p>
+    </section>
+
+    <!-- Features Grid -->
+    <section class="game-section">
+      <h2>Key Features</h2>
+      <div class="feature-grid">
+        <div class="feature-card">
+          <div class="feature-icon">🌍</div>
+          <h3>10 Languages Supported</h3>
+          <p>Italian, Spanish, French, German, Portuguese, Japanese, Chinese, Korean, Russian, and Arabic</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🎮</div>
+          <h3>5 Interactive Games</h3>
+          <p>Wordle, Memory Game, Flower, Verb Tenses Wheel, and Reflexive Verbs Wheel</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💾</div>
+          <h3>Export & Share</h3>
+          <p>Export content as JSON files to share with students or save for later</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🔒</div>
+          <h3>Privacy First</h3>
+          <p>API keys stored locally in your browser only - never sent to our servers</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- How It Works -->
+    <section class="game-section">
+      <h2>How It Works</h2>
+      <div class="workflow-steps">
+        <div class="workflow-step">
+          <div class="step-number">1</div>
+          <h3>Configure</h3>
+          <p class="step-detail">Set up your API key for OpenRouter or Open Web UI</p>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">2</div>
+          <h3>Select</h3>
+          <p class="step-detail">Choose your target language and difficulty level</p>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">3</div>
+          <h3>Generate</h3>
+          <p class="step-detail">AI creates custom vocabulary and grammar content</p>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">4</div>
+          <h3>Play</h3>
+          <p class="step-detail">Use the games with your personalized content</p>
+        </div>
+        <div class="workflow-step">
+          <div class="step-number">5</div>
+          <h3>Export</h3>
+          <p class="step-detail">Save and share content with students</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Important Info Box -->
+    <section class="game-section">
+      <div class="info-box">
+        <h3>For Teachers: Two Ways to Use This System</h3>
+        <p><strong>Option 1: Teacher Generates Content</strong></p>
+        <ul style="text-align: left; max-width: 700px; margin: 0 auto;">
+          <li>You configure the API settings (requires API key)</li>
+          <li>You generate content for your lessons</li>
+          <li>You export the content as a JSON file</li>
+          <li>Students import the JSON file - no API key needed!</li>
+        </ul>
+        <p style="margin-top: var(--spacing-lg);"><strong>Option 2: Individual Use</strong></p>
+        <ul style="text-align: left; max-width: 700px; margin: 0 auto;">
+          <li>Each user configures their own API key</li>
+          <li>Generate custom content whenever needed</li>
+          <li>Perfect for self-directed learners</li>
+        </ul>
+      </div>
+    </section>
+
+    <!-- CTA Section -->
+    <section class="cta-section">
+      <h2>Get Started</h2>
+      <p>Configure your AI provider and start creating custom language learning content.</p>
+      <a href="llm-settings.html" class="cta-button">Go to Settings</a>
+    </section>
+
+    <!-- FAQ Section -->
+    <section class="game-section">
+      <h2>Frequently Asked Questions</h2>
+      <div class="faq-container">
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Is this free?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>The software is free and open-source. However, you need an API key from an LLM provider. OpenRouter offers free credits to start, and their pricing is very affordable (usually a few cents per content generation session).</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Is my API key secure?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Yes! Your API key is stored only in your browser's local storage and never sent to our servers (we don't even have servers). It's only used to make direct API calls to your chosen provider.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Can students use this without an API key?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Yes! Teachers can generate content and export it as a JSON file. Students can then import that file and play the games without needing their own API key.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Which languages are supported?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Currently: Italian, Spanish, French, German, Portuguese, Japanese, Chinese, Korean, Russian, and Arabic. The AI can potentially generate content for any language, but these 10 have been tested.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>How long does content generation take?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p>Typically 2-5 minutes to generate a complete set of content (all games, all topics). This includes making multiple API calls to generate vocabulary, verb conjugations, and game content.</p>
+          </div>
+        </div>
+
+        <div class="faq-item">
+          <button class="faq-question" onclick="toggleFAQ(this)">
+            <span>Where can I find documentation?</span>
+            <span class="faq-arrow">▼</span>
+          </button>
+          <div class="faq-answer">
+            <p><a href="docs/README.md" target="_blank">View full documentation</a> for detailed setup instructions, troubleshooting, and API reference.</p>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-text">
+      <p>
+        Based on <a href="https://beatricecarnelutti.com/impariamo">Beatrice Carnelutti's Impariamo l'Italiano</a>
+      </p>
+      <p>
+        This tool was developed as part of the CUNY AI Lab, a project coordinated by the <a href="https://ashp.cuny.edu" target="_blank" rel="noopener">American Social History Project/Center for Media and Learning</a>, <a href="https://cuny.is/gcdi" target="_blank" rel="noopener">Graduate Center Digital Initiatives</a>, the <a href="https://library.gc.cuny.edu/" target="_blank" rel="noopener">Mina Rees Library</a>, and the <a href="https://tlc.commons.gc.cuny.edu/" target="_blank" rel="noopener">Teaching and Learning Center</a>.
+      </p>
+    </div>
+  </footer>
+
+  <script>
+    function toggleFAQ(button) {
+      const faqItem = button.parentElement;
+      const wasActive = faqItem.classList.contains('active');
+
+      // Close all FAQ items
+      document.querySelectorAll('.faq-item').forEach(item => {
+        item.classList.remove('active');
+      });
+
+      // Open clicked item if it wasn't active
+      if (!wasActive) {
+        faqItem.classList.add('active');
+      }
+    }
+  </script>
+</body>
+</html>

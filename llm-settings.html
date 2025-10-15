@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Settings & Content Generation - LanGames</title>
+  <link rel="stylesheet" href="css/styles-v3.css">
+  <link rel="stylesheet" href="css/adaptive-v3.css">
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-QJL9EQGT3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-QJL9EQGT3Y');
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>LanGames</h1>
+    </div>
+  </header>
+  <nav>
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
+    <div class="menu-items">
+      <a href="index.html">Home</a>
+      <a href="llm-settings.html" class="active" aria-current="page">Settings</a>
+      <div class="dropdown" onclick="toggleDropdown(event)">
+        <a href="#">Games</a>
+        <div class="dropdown-content">
+          <a href="wordle-adaptive.html">Wordle</a>
+          <a href="memory-adaptive.html">Memory Game</a>
+          <a href="fiore-adaptive.html">Flower</a>
+          <a href="tenses-adaptive.html">Verb Tenses Wheel</a>
+          <a href="reflexives-adaptive.html">Reflexive Verbs Wheel</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <script>
+    function toggleMenu() {
+      const menu = document.querySelector('nav .menu-items');
+      menu.classList.toggle('show-menu');
+    }
+
+    function toggleDropdown(event) {
+      // Only toggle on mobile (when hamburger is visible)
+      if (window.innerWidth <= 600) {
+        event.stopPropagation();
+        const dropdown = event.currentTarget;
+        dropdown.classList.toggle('active');
+      }
+    }
+  </script>
+
+  <main class="container settings-container">
+    <h2>Settings & Content Generation</h2>
+    <p>Configure your AI provider, generate custom content, and manage your learning materials.</p>
+
+    <!-- Alert Container -->
+    <div id="alertContainer"></div>
+
+    <!-- =========================
+         SECTION 1: API Configuration
+         ========================= -->
+    <section class="settings-section">
+      <h3>API Configuration</h3>
+      <p class="settings-section-description">Configure your LLM provider settings. Your API keys are stored only in your browser's local storage and never sent to our servers.</p>
+
+      <!-- Security Warning -->
+      <div class="alert alert-warning">
+        <strong>Security Notice:</strong> API keys are stored in browser local storage only. For production environments, consider implementing a backend proxy.
+      </div>
+
+      <!-- Provider Tabs -->
+      <div class="provider-tabs">
+        <button class="provider-tab active" data-provider="openrouter">Open Router</button>
+        <button class="provider-tab" data-provider="openwebui">Open Web UI</button>
+      </div>
+
+      <!-- Open Router Panel -->
+      <div class="provider-panel active" id="panel-openrouter">
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: var(--spacing-lg);">Open Router provides access to multiple AI models through a single API.</p>
+        <div class="form-group">
+          <label for="openrouter-endpoint">API Endpoint</label>
+          <input type="text" id="openrouter-endpoint" placeholder="https://openrouter.ai/api/v1/chat/completions">
+        </div>
+        <div class="form-group">
+          <label for="openrouter-key">API Key</label>
+          <div class="password-wrapper">
+            <input type="password" id="openrouter-key" placeholder="sk-or-v1-...">
+            <button type="button" class="password-toggle" onclick="togglePassword('openrouter-key')">👁️</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="openrouter-model">Model</label>
+          <select id="openrouter-model">
+            <option value="">Select a model...</option>
+            <option value="openai/gpt-4">OpenAI GPT-4</option>
+            <option value="anthropic/claude-3.5-sonnet">Anthropic Claude 3.5 Sonnet</option>
+            <option value="google/gemini-pro">Google Gemini Pro</option>
+            <option value="meta-llama/llama-3-70b-instruct">Meta Llama 3 70B</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Open Web UI Panel -->
+      <div class="provider-panel" id="panel-openwebui">
+        <p style="color: var(--text-muted); font-size: 14px; margin-bottom: var(--spacing-lg);">Connect to your local Open Web UI instance for privacy and control.</p>
+        <div class="form-group">
+          <label for="openwebui-endpoint">API Endpoint</label>
+          <input type="text" id="openwebui-endpoint" placeholder="http://localhost:8080/api/chat/completions">
+        </div>
+        <div class="form-group">
+          <label for="openwebui-key">API Key</label>
+          <div class="password-wrapper">
+            <input type="password" id="openwebui-key" placeholder="Your Open Web UI API key">
+            <button type="button" class="password-toggle" onclick="togglePassword('openwebui-key')">👁️</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label for="openwebui-model">Model</label>
+          <select id="openwebui-model">
+            <option value="">Select a model...</option>
+            <option value="custom-model-1">Custom Model 1</option>
+            <option value="custom-model-2">Custom Model 2</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="button-group">
+        <button type="button" class="btn-test" onclick="testConnection()">Test Connection</button>
+        <button type="button" class="btn-primary" onclick="saveSettings()">Save Settings</button>
+        <button type="button" class="btn-secondary" onclick="clearAPISettings()">Clear Settings</button>
+      </div>
+    </section>
+
+    <!-- =========================
+         SECTION 2: Content Generation
+         ========================= -->
+    <section class="settings-section">
+      <h3>Content Generation</h3>
+      <p class="settings-section-description">Generate custom vocabulary, verb conjugations, and game content using AI. Choose your target language and difficulty level.</p>
+
+      <!-- Language Selection - COMPACT -->
+      <div style="margin-bottom: var(--spacing-lg);">
+        <h4 style="color: var(--text-dark); margin-bottom: var(--spacing-sm); font-size: 1rem;">Select Target Language</h4>
+        <div class="selection-grid">
+          <div class="selection-card" data-language="Italian" onclick="selectLanguage('Italian')">
+            <h3>🇮🇹 Italian</h3>
+          </div>
+          <div class="selection-card" data-language="Spanish" onclick="selectLanguage('Spanish')">
+            <h3>🇪🇸 Spanish</h3>
+          </div>
+          <div class="selection-card" data-language="French" onclick="selectLanguage('French')">
+            <h3>🇫🇷 French</h3>
+          </div>
+          <div class="selection-card" data-language="German" onclick="selectLanguage('German')">
+            <h3>🇩🇪 German</h3>
+          </div>
+          <div class="selection-card" data-language="Portuguese" onclick="selectLanguage('Portuguese')">
+            <h3>🇵🇹 Portuguese</h3>
+          </div>
+          <div class="selection-card" data-language="Japanese" onclick="selectLanguage('Japanese')">
+            <h3>🇯🇵 Japanese</h3>
+          </div>
+          <div class="selection-card" data-language="Chinese" onclick="selectLanguage('Chinese')">
+            <h3>🇨🇳 Chinese</h3>
+          </div>
+          <div class="selection-card" data-language="Korean" onclick="selectLanguage('Korean')">
+            <h3>🇰🇷 Korean</h3>
+          </div>
+          <div class="selection-card" data-language="Russian" onclick="selectLanguage('Russian')">
+            <h3>🇷🇺 Russian</h3>
+          </div>
+          <div class="selection-card" data-language="Arabic" onclick="selectLanguage('Arabic')">
+            <h3>🇸🇦 Arabic</h3>
+          </div>
+        </div>
+      </div>
+
+      <!-- Difficulty Selection - COMPACT -->
+      <div style="margin-bottom: var(--spacing-lg);">
+        <h4 style="color: var(--text-dark); margin-bottom: var(--spacing-sm); font-size: 1rem;">Select Difficulty Level</h4>
+        <div class="selection-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
+          <div class="selection-card difficulty-beginner" data-difficulty="beginner" onclick="selectDifficulty('beginner')">
+            <h3>Beginner</h3>
+            <p>Basic vocabulary</p>
+          </div>
+          <div class="selection-card difficulty-intermediate" data-difficulty="intermediate" onclick="selectDifficulty('intermediate')">
+            <h3>Intermediate</h3>
+            <p>Everyday use</p>
+          </div>
+          <div class="selection-card difficulty-advanced" data-difficulty="advanced" onclick="selectDifficulty('advanced')">
+            <h3>Advanced</h3>
+            <p>Complex language</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Generate Button -->
+      <div style="text-align: center;">
+        <button class="continue-button" id="generateBtn" disabled onclick="generateContent()">
+          Generate Content
+        </button>
+        <p style="color: var(--text-muted); font-size: 14px; margin-top: var(--spacing-md);">
+          This will take 2-5 minutes and use API credits. Any existing content will be replaced.
+        </p>
+      </div>
+    </section>
+
+    <!-- Progress Modal -->
+    <div class="modal-overlay" id="progressModal">
+      <div class="modal-content">
+        <h3 style="text-align: center; margin-top: 0;">Generating Content</h3>
+        <p style="text-align: center; color: var(--text-muted);">Please wait while we create your custom learning materials...</p>
+
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+        </div>
+
+        <p class="progress-text" id="progressText">Initializing...</p>
+
+        <div class="spinner"></div>
+      </div>
+    </div>
+
+    <!-- =========================
+         SECTION 3: Content Management
+         ========================= -->
+    <section class="settings-section">
+      <h3>Content Management</h3>
+      <p class="settings-section-description">Export your generated content to share with students, or import content created by others.</p>
+
+      <!-- Current Content Info -->
+      <div id="currentContentInfo" class="content-info-box" style="display: none;">
+        <h4>Current Content</h4>
+        <p id="contentLanguage" style="margin: var(--spacing-xs) 0;"></p>
+        <p id="contentDifficulty" style="margin: var(--spacing-xs) 0;"></p>
+        <p id="contentTimestamp" style="margin: var(--spacing-xs) 0; font-size: 14px; color: var(--text-muted);"></p>
+      </div>
+
+      <div class="content-actions">
+        <button class="btn-export" onclick="exportContent()">📥 Export Content</button>
+        <label for="importFile" class="btn-import">
+          📤 Import Content
+        </label>
+        <input type="file" id="importFile" accept=".json" style="display: none;" onchange="importContent(event)">
+      </div>
+
+      <div class="alert alert-info" style="margin-top: var(--spacing-lg);">
+        <strong>For Teachers:</strong> Generate content, export it, and share the JSON file with students. They can import it without needing their own API key!
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-text">
+      <p>
+        Based on <a href="https://beatricecarnelutti.com/impariamo">Beatrice Carnelutti's Impariamo l'Italiano</a>
+      </p>
+      <p>
+        This tool was developed as part of the CUNY AI Lab, a project coordinated by the <a href="https://ashp.cuny.edu" target="_blank" rel="noopener">American Social History Project/Center for Media and Learning</a>, <a href="https://cuny.is/gcdi" target="_blank" rel="noopener">Graduate Center Digital Initiatives</a>, the <a href="https://library.gc.cuny.edu/" target="_blank" rel="noopener">Mina Rees Library</a>, and the <a href="https://tlc.commons.gc.cuny.edu/" target="_blank" rel="noopener">Teaching and Learning Center</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Load JavaScript modules -->
+  <script src="js/llm-config.js" defer></script>
+  <script src="js/content-generator.js" defer></script>
+  <script src="js/game-content-loader.js" defer></script>
+
+  <script defer>
+    // State management
+    let selectedLanguage = null;
+    let selectedDifficulty = null;
+    let currentProvider = 'openrouter';
+
+    // Initialize page on load
+    window.addEventListener('DOMContentLoaded', () => {
+      loadExistingSettings();
+      setupTabListeners();
+      populateDefaultEndpoints();
+      checkExistingContent();
+      verifyModules();
+    });
+
+    // Verify all required modules are loaded
+    function verifyModules() {
+      const modules = {
+        LLMConfig: typeof LLMConfig !== 'undefined',
+        ContentGenerator: typeof ContentGenerator !== 'undefined',
+        GameContentLoader: typeof GameContentLoader !== 'undefined'
+      };
+
+      const missing = Object.entries(modules)
+        .filter(([name, loaded]) => !loaded)
+        .map(([name]) => name);
+
+      if (missing.length > 0) {
+        showAlert('error', `System error: Required modules not loaded: ${missing.join(', ')}. Please refresh the page.`);
+        return false;
+      }
+
+      return true;
+    }
+
+    // ===========================
+    // API Configuration Functions
+    // ===========================
+
+    function setupTabListeners() {
+      const tabs = document.querySelectorAll('.provider-tab');
+      tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+          const provider = tab.dataset.provider;
+          switchProvider(provider);
+        });
+      });
+    }
+
+    function switchProvider(provider) {
+      currentProvider = provider;
+
+      document.querySelectorAll('.provider-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.provider === provider);
+      });
+
+      document.querySelectorAll('.provider-panel').forEach(panel => {
+        panel.classList.toggle('active', panel.id === `panel-${provider}`);
+      });
+    }
+
+    function populateDefaultEndpoints() {
+      if (typeof LLMConfig !== 'undefined') {
+        document.getElementById('openrouter-endpoint').value = LLMConfig.getDefaultEndpoint('openrouter');
+        document.getElementById('openwebui-endpoint').value = LLMConfig.getDefaultEndpoint('openwebui');
+      }
+    }
+
+    function loadExistingSettings() {
+      if (typeof LLMConfig === 'undefined') return;
+
+      const settings = LLMConfig.getSettings();
+      if (settings) {
+        switchProvider(settings.provider);
+
+        const providerPrefix = settings.provider;
+        document.getElementById(`${providerPrefix}-endpoint`).value = settings.endpoint || '';
+        document.getElementById(`${providerPrefix}-key`).value = settings.apiKey || '';
+        document.getElementById(`${providerPrefix}-model`).value = settings.model || '';
+      }
+    }
+
+    function togglePassword(inputId) {
+      const input = document.getElementById(inputId);
+      const button = input.nextElementSibling;
+
+      if (input.type === 'password') {
+        input.type = 'text';
+        button.textContent = '🙈';
+      } else {
+        input.type = 'password';
+        button.textContent = '👁️';
+      }
+    }
+
+    async function testConnection() {
+      if (!verifyModules()) return;
+
+      const settings = getCurrentSettings();
+      if (!settings) return;
+
+      const testButton = document.querySelector('.btn-test');
+      testButton.disabled = true;
+      testButton.textContent = 'Testing...';
+
+      try {
+        const result = await LLMConfig.testConnection(settings);
+
+        if (result.success) {
+          showAlert('success', result.message);
+        } else {
+          showAlert('error', result.message);
+        }
+      } catch (error) {
+        showAlert('error', `Test failed: ${error.message}`);
+      } finally {
+        testButton.disabled = false;
+        testButton.textContent = 'Test Connection';
+      }
+    }
+
+    function saveSettings() {
+      if (!verifyModules()) return;
+
+      const settings = getCurrentSettings();
+      if (!settings) return;
+
+      const validation = LLMConfig.validateSettings(settings);
+      if (!validation.valid) {
+        showAlert('error', `Validation failed: ${validation.error}`);
+        return;
+      }
+
+      const saved = LLMConfig.saveSettings(settings);
+      if (saved) {
+        showAlert('success', 'Settings saved successfully! You can now generate custom content.');
+      } else {
+        showAlert('error', 'Failed to save settings. Please try again.');
+      }
+    }
+
+    function getCurrentSettings() {
+      const provider = currentProvider;
+      const endpoint = document.getElementById(`${provider}-endpoint`).value.trim();
+      const apiKey = document.getElementById(`${provider}-key`).value.trim();
+      const model = document.getElementById(`${provider}-model`).value.trim();
+
+      if (!endpoint) {
+        showAlert('error', 'Please enter an API endpoint.');
+        return null;
+      }
+      if (!apiKey) {
+        showAlert('error', 'Please enter an API key.');
+        return null;
+      }
+      if (!model) {
+        showAlert('error', 'Please select a model.');
+        return null;
+      }
+
+      return {
+        provider,
+        endpoint,
+        apiKey,
+        model
+      };
+    }
+
+    function clearAPISettings() {
+      if (confirm('Are you sure you want to clear all API settings?')) {
+        if (typeof LLMConfig !== 'undefined') {
+          LLMConfig.clearSettings();
+        }
+        location.reload();
+      }
+    }
+
+    // ===========================
+    // Content Generation Functions
+    // ===========================
+
+    function selectLanguage(language) {
+      selectedLanguage = language;
+
+      document.querySelectorAll('[data-language]').forEach(card => {
+        card.classList.toggle('selected', card.dataset.language === language);
+      });
+
+      updateGenerateButton();
+    }
+
+    function selectDifficulty(difficulty) {
+      selectedDifficulty = difficulty;
+
+      document.querySelectorAll('[data-difficulty]').forEach(card => {
+        card.classList.toggle('selected', card.dataset.difficulty === difficulty);
+      });
+
+      updateGenerateButton();
+    }
+
+    function updateGenerateButton() {
+      const btn = document.getElementById('generateBtn');
+      btn.disabled = !(selectedLanguage && selectedDifficulty);
+    }
+
+    async function generateContent() {
+      if (!verifyModules()) return;
+
+      const settings = LLMConfig.getSettings();
+      if (!settings) {
+        showAlert('error', 'Please configure your API settings first (Section 1 above).');
+        return;
+      }
+
+      if (!selectedLanguage || !selectedDifficulty) {
+        showAlert('error', 'Please select both language and difficulty level.');
+        return;
+      }
+
+      const confirmed = confirm(
+        `Generate new content for ${selectedLanguage} (${selectedDifficulty} level)?\n\n` +
+        `This will take several minutes and use API credits.\n` +
+        `Any existing content will be replaced.`
+      );
+
+      if (!confirmed) return;
+
+      // Show progress modal
+      const modal = document.getElementById('progressModal');
+      modal.classList.add('active');
+
+      // Progress callback
+      const updateProgress = (message, percent) => {
+        document.getElementById('progressFill').style.width = percent + '%';
+        document.getElementById('progressText').textContent = message;
+      };
+
+      try {
+        const content = await ContentGenerator.generateAllContent(
+          selectedLanguage,
+          selectedDifficulty,
+          updateProgress
+        );
+
+        const saved = GameContentLoader.saveContent(content);
+
+        if (!saved) {
+          throw new Error('Failed to save content to localStorage');
+        }
+
+        modal.classList.remove('active');
+        showAlert('success', 'Content generated successfully! Content ready! Choose a game from the navigation menu.');
+        checkExistingContent();
+
+      } catch (error) {
+        modal.classList.remove('active');
+        const errorMessage = error.message || 'Unknown error occurred';
+        showAlert('error', `Content generation failed: ${errorMessage}`);
+      }
+    }
+
+    // ===========================
+    // Content Management Functions
+    // ===========================
+
+    function checkExistingContent() {
+      if (typeof GameContentLoader === 'undefined') return;
+
+      const contentInfo = GameContentLoader.getContentInfo();
+      if (contentInfo) {
+        displayCurrentContent(contentInfo);
+      }
+    }
+
+    function displayCurrentContent(info) {
+      document.getElementById('currentContentInfo').style.display = 'block';
+      document.getElementById('contentLanguage').textContent = `Language: ${info.language}`;
+      document.getElementById('contentDifficulty').textContent = `Difficulty: ${info.difficulty}`;
+
+      const date = new Date(info.timestamp);
+      document.getElementById('contentTimestamp').textContent = `Generated: ${date.toLocaleString()}`;
+
+      // Update selections to match
+      if (info.language) {
+        selectLanguage(info.language);
+      }
+      if (info.difficulty) {
+        selectDifficulty(info.difficulty);
+      }
+    }
+
+    function exportContent() {
+      if (!verifyModules()) return;
+
+      try {
+        GameContentLoader.exportContent();
+        showAlert('success', 'Content exported successfully!');
+      } catch (error) {
+        showAlert('error', `Export failed: ${error.message}`);
+      }
+    }
+
+    async function importContent(event) {
+      if (!verifyModules()) return;
+
+      const file = event.target.files[0];
+      if (!file) return;
+
+      try {
+        const content = await GameContentLoader.importContent(file);
+
+        if (content.language) {
+          selectLanguage(content.language);
+        }
+        if (content.difficulty) {
+          selectDifficulty(content.difficulty);
+        }
+
+        showAlert('success', 'Content imported successfully! Content ready! Choose a game from the navigation menu.');
+        checkExistingContent();
+
+      } catch (error) {
+        showAlert('error', `Import failed: ${error.message}`);
+      }
+
+      event.target.value = '';
+    }
+
+    // ===========================
+    // Utility Functions
+    // ===========================
+
+    function showAlert(type, message) {
+      const container = document.getElementById('alertContainer');
+      const alert = document.createElement('div');
+      alert.className = `alert alert-${type}`;
+      alert.innerHTML = message;
+
+      container.innerHTML = '';
+      container.appendChild(alert);
+
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+
+      if (type === 'success') {
+        setTimeout(() => {
+          alert.remove();
+        }, 8000);
+      }
+    }
+  </script>
+</body>
+</html>

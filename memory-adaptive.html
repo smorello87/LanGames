@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Memory Game - LanGames</title>
+  <link rel="stylesheet" href="css/styles-v3.css">
+  <link rel="stylesheet" href="css/games-v3.css">
+  <link rel="stylesheet" href="css/adaptive-v3.css">
+  <style>
+    .game-section {
+      text-align: center;
+      margin: var(--spacing-lg) 0;
+    }
+    .session-info {
+      background: var(--color-gray-100);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius-small);
+      margin-bottom: var(--spacing-lg);
+      text-align: center;
+    }
+    .session-info span {
+      display: inline-block;
+      margin: 0 var(--spacing-md);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-italian-green);
+    }
+    #gameFeedback {
+      margin-top: var(--spacing-lg);
+      font-weight: var(--font-weight-bold);
+      font-size: var(--font-size-large);
+      min-height: 30px;
+    }
+  </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-QJL9EQGT3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-QJL9EQGT3Y');
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>LanGames - Memory Game</h1>
+    </div>
+  </header>
+  <nav>
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
+    <div class="menu-items">
+      <a href="index.html">Home</a>
+      <a href="llm-settings.html">Settings</a>
+      <div class="dropdown" onclick="toggleDropdown(event)">
+        <a href="#">Games</a>
+        <div class="dropdown-content">
+          <a href="wordle-adaptive.html">Wordle</a>
+          <a href="memory-adaptive.html" class="active">Memory Game</a>
+          <a href="fiore-adaptive.html">Flower</a>
+          <a href="tenses-adaptive.html">Verb Tenses Wheel</a>
+          <a href="reflexives-adaptive.html">Reflexive Verbs Wheel</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <script>
+    function toggleMenu() {
+      const menu = document.querySelector('nav .menu-items');
+      menu.classList.toggle('show-menu');
+    }
+
+    function toggleDropdown(event) {
+      // Only toggle on mobile (when hamburger is visible)
+      if (window.innerWidth <= 600) {
+        event.stopPropagation();
+        const dropdown = event.currentTarget;
+        dropdown.classList.toggle('active');
+      }
+    }
+  </script>
+
+  <main class="container">
+    <div id="sessionInfo" class="session-info"></div>
+
+    <!-- Topic Selection Section -->
+    <section id="topicSelection" class="game-section">
+      <h2>Select a Topic</h2>
+      <select id="topicSelect">
+        <option value="food">Food</option>
+        <option value="daily">Daily Activities</option>
+        <option value="family">Family</option>
+        <option value="school">School</option>
+        <option value="work">Work</option>
+      </select>
+      <br>
+      <button onclick="startGame()">Start Game</button>
+      <br><br>
+      <a href="llm-settings.html">Back to Settings</a>
+    </section>
+
+    <!-- Memory Game Section -->
+    <section id="memoryGame" class="game-section" style="display:none;">
+      <h2 id="gameTitle"></h2>
+      <div id="board" class="memory-board"></div>
+      <button onclick="goBack()">Change Topic</button>
+      <div id="gameFeedback"></div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-text">
+      <p>
+        Based on <a href="https://beatricecarnelutti.com/impariamo">Beatrice Carnelutti's Impariamo l'Italiano</a>
+      </p>
+      <p>
+        This tool was developed as part of the CUNY AI Lab, a project coordinated by the <a href="https://ashp.cuny.edu" target="_blank" rel="noopener">American Social History Project/Center for Media and Learning</a>, <a href="https://cuny.is/gcdi" target="_blank" rel="noopener">Graduate Center Digital Initiatives</a>, the <a href="https://library.gc.cuny.edu/" target="_blank" rel="noopener">Mina Rees Library</a>, and the <a href="https://tlc.commons.gc.cuny.edu/" target="_blank" rel="noopener">Teaching and Learning Center</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Load JavaScript modules -->
+  <script src="js/game-content-loader.js"></script>
+
+  <script>
+    let customTopics = null;
+    let cards = [];
+    let firstCard = null;
+    let secondCard = null;
+    let lockBoard = false;
+    let matchesFound = 0;
+    let totalMatches = 0;
+    let selectedTopic = "";
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCustomContent();
+      displaySessionInfo();
+    });
+
+    function loadCustomContent() {
+      const content = GameContentLoader.loadContent();
+      if (content && content.memory) {
+        // Convert custom content format to internal format
+        // Custom format: {topic: [{word: "x", english: "y"}]}
+        // Internal format: {topic: [{italian: "x", english: "y"}]}
+        customTopics = {};
+        for (const topic in content.memory) {
+          customTopics[topic] = content.memory[topic].map(item => ({
+            italian: item.word,
+            english: item.english
+          }));
+        }
+        console.log('Custom content loaded successfully');
+      } else {
+        // No fallback - redirect to settings
+        alert('No content available. Please go to Settings and generate content first.');
+        window.location.href = 'llm-settings.html';
+        return;
+      }
+    }
+
+    function displaySessionInfo() {
+      const contentInfo = GameContentLoader.getContentInfo();
+      const infoDiv = document.getElementById('sessionInfo');
+
+      if (contentInfo) {
+        infoDiv.innerHTML = `
+          <span>Language: ${contentInfo.language}</span>
+          <span>Difficulty: ${contentInfo.difficulty}</span>
+        `;
+      } else {
+        infoDiv.innerHTML = '<span>Using default Italian content</span>';
+      }
+    }
+
+    function startGame() {
+      selectedTopic = document.getElementById("topicSelect").value;
+      document.getElementById("topicSelection").style.display = "none";
+      document.getElementById("memoryGame").style.display = "block";
+      document.getElementById("gameTitle").innerText = "Memory Game: " + selectedTopic.charAt(0).toUpperCase() + selectedTopic.slice(1);
+      setupBoard();
+    }
+
+    function setupBoard() {
+      const boardDiv = document.getElementById("board");
+      boardDiv.innerHTML = "";
+      cards = [];
+      matchesFound = 0;
+
+      // Check if custom topics are available
+      if (!customTopics || !customTopics[selectedTopic]) {
+        alert('No content available. Please go to Settings and generate content first.');
+        window.location.href = 'llm-settings.html';
+        return;
+      }
+
+      const pairs = customTopics[selectedTopic];
+      totalMatches = pairs.length;
+      pairs.forEach((pair, index) => {
+        const id = index;
+        cards.push({ id: id, text: pair.italian, flipped: false, matched: false });
+        cards.push({ id: id, text: pair.english, flipped: false, matched: false });
+      });
+      cards = shuffle(cards);
+
+      cards.forEach((card, index) => {
+        const cardDiv = document.createElement("div");
+        cardDiv.classList.add("card");
+        cardDiv.setAttribute("data-index", index);
+        cardDiv.innerText = index + 1;
+        cardDiv.addEventListener("click", onCardClick);
+        boardDiv.appendChild(cardDiv);
+      });
+    }
+
+    function onCardClick(e) {
+      if (lockBoard) return;
+      const cardDiv = e.currentTarget;
+      const index = cardDiv.getAttribute("data-index");
+      const card = cards[index];
+      if (card.flipped || card.matched) return;
+
+      flipCard(cardDiv, card);
+
+      if (!firstCard) {
+        firstCard = { card, cardDiv };
+      } else {
+        secondCard = { card, cardDiv };
+        lockBoard = true;
+        setTimeout(checkForMatch, 1000);
+      }
+    }
+
+    function flipCard(cardDiv, card) {
+      card.flipped = true;
+      cardDiv.innerText = card.text;
+      cardDiv.classList.add("flipped");
+    }
+
+    function unflipCard(cardDiv, card) {
+      card.flipped = false;
+      const idx = parseInt(cardDiv.getAttribute("data-index"), 10);
+      cardDiv.innerText = idx + 1;
+      cardDiv.classList.remove("flipped");
+    }
+
+    function checkForMatch() {
+      if (firstCard.card.id === secondCard.card.id) {
+        firstCard.card.matched = true;
+        secondCard.card.matched = true;
+        firstCard.cardDiv.classList.add("matched");
+        secondCard.cardDiv.classList.add("matched");
+        matchesFound++;
+
+        if (matchesFound === totalMatches) {
+          document.getElementById("gameFeedback").innerText = "Congratulations! You found all matches.";
+        }
+      } else {
+        unflipCard(firstCard.cardDiv, firstCard.card);
+        unflipCard(secondCard.cardDiv, secondCard.card);
+      }
+
+      firstCard = null;
+      secondCard = null;
+      lockBoard = false;
+    }
+
+    function shuffle(array) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+      }
+      return array;
+    }
+
+    function goBack() {
+      document.getElementById("memoryGame").style.display = "none";
+      document.getElementById("topicSelection").style.display = "block";
+      document.getElementById("gameFeedback").innerText = "";
+    }
+  </script>
+</body>
+</html>

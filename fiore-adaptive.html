@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Flower - LanGames</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="css/styles-v3.css">
+  <link rel="stylesheet" href="css/games-v3.css">
+  <link rel="stylesheet" href="css/adaptive-v3.css">
+  <style>
+    /* Game-specific styles for Fiore */
+    .game-section {
+      text-align: center;
+      margin: var(--spacing-lg) 0;
+    }
+
+    .controls {
+      display: flex;
+      gap: 1em;
+      justify-content: center;
+      width: 100%;
+    }
+
+    #game {
+      min-height: 400px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      row-gap: 1.5em;
+      text-align: center;
+    }
+
+    #game { display: none; }
+
+    #hangman { margin-bottom: 0.5em; font-weight: bold; }
+
+    .session-info {
+      background: var(--color-gray-100);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius-small);
+      margin-bottom: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .session-info span {
+      display: inline-block;
+      margin: 0 var(--spacing-md);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-italian-green);
+    }
+
+    @media (max-width: 600px) {
+      #letters {
+        grid-template-columns: repeat(7, 1fr);
+      }
+    }
+  </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-QJL9EQGT3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-QJL9EQGT3Y');
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>LanGames - Flower</h1>
+    </div>
+  </header>
+  <nav>
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
+    <div class="menu-items">
+      <a href="index.html">Home</a>
+      <a href="llm-settings.html">Settings</a>
+      <div class="dropdown" onclick="toggleDropdown(event)">
+        <a href="#">Games</a>
+        <div class="dropdown-content">
+          <a href="wordle-adaptive.html">Wordle</a>
+          <a href="memory-adaptive.html">Memory Game</a>
+          <a href="fiore-adaptive.html" class="active">Flower</a>
+          <a href="tenses-adaptive.html">Verb Tenses Wheel</a>
+          <a href="reflexives-adaptive.html">Reflexive Verbs Wheel</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <div id="sessionInfo" class="session-info"></div>
+
+    <div id="setup" class="game-section">
+      <h2>Start Game</h2>
+      <p>Guess the word letter by letter. Each wrong guess adds a petal to help the flower bloom!</p>
+      <button id="startBtn">Start</button>
+      <br><br>
+      <a href="llm-settings.html">Back to Settings</a>
+    </div>
+
+    <div id="game">
+      <div id="hangman">Petals: <span id="lives"></span> / 8</div>
+      <div id="word"></div>
+      <div id="letters"></div>
+      <div id="message"></div>
+      <div id="image-container">
+        <img id="hangmanImage" src="flower/flower0.jpg" alt="Flower blooming">
+        <div class="controls">
+          <button id="restartBtn">New Game</button>
+          <button id="changeLevelBtn">Back</button>
+  
+
+    </div>
+  </main>
+
+  <footer>
+    <div class="footer-text">
+      <p>
+        Based on <a href="https://beatricecarnelutti.com/impariamo">Beatrice Carnelutti's Impariamo l'Italiano</a>
+      </p>
+      <p>
+        This tool was developed as part of the CUNY AI Lab, a project coordinated by the <a href="https://ashp.cuny.edu" target="_blank" rel="noopener">American Social History Project/Center for Media and Learning</a>, <a href="https://cuny.is/gcdi" target="_blank" rel="noopener">Graduate Center Digital Initiatives</a>, the <a href="https://library.gc.cuny.edu/" target="_blank" rel="noopener">Mina Rees Library</a>, and the <a href="https://tlc.commons.gc.cuny.edu/" target="_blank" rel="noopener">Teaching and Learning Center</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Load JavaScript modules -->
+  <script src="js/game-content-loader.js"></script>
+
+  <script>
+    // Nav hamburger toggle
+    function toggleMenu() {
+      document.querySelector('.menu-items').classList.toggle('show-menu');
+    }
+
+    function toggleDropdown(event) {
+      // Only toggle on mobile (when hamburger is visible)
+      if (window.innerWidth <= 600) {
+        event.stopPropagation();
+        const dropdown = event.currentTarget;
+        dropdown.classList.toggle('active');
+      }
+    }
+
+    // Custom content from LLM
+    let customWords = null;
+    const totalLives = 8;
+    let answer = '', displayed = [], lives = totalLives, gameOver = false;
+    const setupEl = document.getElementById('setup');
+    const gameEl = document.getElementById('game');
+    const startBtn = document.getElementById('startBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const changeLevelBtn = document.getElementById('changeLevelBtn');
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCustomContent();
+      displaySessionInfo();
+    });
+
+    function loadCustomContent() {
+      const content = GameContentLoader.loadContent();
+      if (content && content.wordle && content.wordle.length > 0) {
+        // Use wordle words for Fiore game
+        customWords = content.wordle.map(w => w.toUpperCase());
+        console.log('Custom content loaded:', customWords.length, 'words');
+      } else {
+        // No fallback - redirect to settings
+        alert('No content available. Please go to Settings and generate content first.');
+        window.location.href = 'llm-settings.html';
+        return;
+      }
+    }
+
+    function displaySessionInfo() {
+      const contentInfo = GameContentLoader.getContentInfo();
+      const infoDiv = document.getElementById('sessionInfo');
+
+      if (contentInfo) {
+        infoDiv.innerHTML = `
+          <span>Language: ${contentInfo.language}</span>
+          <span>Difficulty: ${contentInfo.difficulty}</span>
+        `;
+      } else {
+        infoDiv.innerHTML = '<span>Using default Italian content</span>';
+      }
+    }
+
+    startBtn.addEventListener('click', startGame);
+    restartBtn.addEventListener('click', startGame);
+    changeLevelBtn.addEventListener('click', () => {
+      gameEl.style.display = 'none';
+      setupEl.style.display = 'flex';
+    });
+
+    function startGame() {
+      // Check if custom words are available
+      if (!customWords || customWords.length === 0) {
+        alert('No content available. Please go to Settings and generate content first.');
+        window.location.href = 'llm-settings.html';
+        return;
+      }
+
+      answer = customWords[Math.floor(Math.random() * customWords.length)].toUpperCase();
+
+      displayed = Array(answer.length).fill('_');
+      lives = totalLives;
+      gameOver = false;
+
+      const mistakes = totalLives - lives;
+      document.getElementById('lives').textContent = mistakes;
+      document.getElementById('message').textContent = '';
+      document.getElementById('hangmanImage').src = 'flower/flower0.jpg';
+
+      setupEl.style.display = 'none';
+      gameEl.style.display = 'flex';
+
+      renderWord();
+      createLetterButtons();
+    }
+
+    function renderWord() {
+      document.getElementById('word').textContent = displayed.join(' ');
+    }
+
+    function createLetterButtons() {
+      const container = document.getElementById('letters');
+      container.innerHTML = '';
+      for (let i = 65; i <= 90; i++) {
+        const btn = document.createElement('button');
+        btn.textContent = String.fromCharCode(i);
+        btn.addEventListener('click', () => handleGuess(btn));
+        container.appendChild(btn);
+      }
+    }
+
+    function handleGuess(btn) {
+      if (gameOver) return;
+      const letter = btn.textContent;
+      btn.disabled = true;
+      let found = false;
+
+      for (let i = 0; i < answer.length; i++) {
+        if (answer[i] === letter) {
+          displayed[i] = letter;
+          found = true;
+        }
+      }
+
+      if (!found) {
+        lives--;
+        const mistakes = totalLives - lives;
+        document.getElementById('lives').textContent = mistakes;
+        updateImage();
+      }
+
+      renderWord();
+      checkEnd();
+    }
+
+    function checkEnd() {
+      const msg = document.getElementById('message');
+      const mistakes = totalLives - lives;
+      if (!displayed.includes('_')) {
+        msg.textContent = `Congratulations! You won with ${mistakes} petal${mistakes !== 1 ? 's' : ''}!`;
+        gameOver = true;
+      } else if (lives === 0) {
+        msg.textContent = `Game Over! The flower has fully bloomed. The word was: ${answer}`;
+        gameOver = true;
+      }
+    }
+
+    function updateImage() {
+      const mistakes = totalLives - lives;
+      document.getElementById('hangmanImage').src = `flower/flower${mistakes}.jpg`;
+    }
+  </script>
+</body>
+</html>

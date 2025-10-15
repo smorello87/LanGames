@@ -1,0 +1,1143 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>New Media Lab Whisper Transcriber | CUNY Graduate Center</title>
+  <style>
+    :root {
+      /* CUNY Graduate Center Color Palette */
+      --primary-blue: #003DA5;
+      --secondary-blue: #002D72;
+      --dark-navy: #001F4C;
+      --accent-red: #DC143C;
+      --light-gray: #F8F9FA;
+      --medium-gray: #E9ECEF;
+      --border-gray: #DEE2E6;
+      --text-dark: #212529;
+      --text-muted: #6C757D;
+      --text-light: #495057;
+      --white: #FFFFFF;
+      --success: #28A745;
+      --warning: #FFC107;
+      --danger: #DC3545;
+      --shadow-sm: 0 2px 4px rgba(0,0,0,0.08);
+      --shadow-md: 0 4px 12px rgba(0,0,0,0.12);
+      --shadow-lg: 0 8px 24px rgba(0,0,0,0.15);
+    }
+
+    * { box-sizing: border-box; }
+
+    html, body {
+      height: 100%;
+      margin: 0;
+      background: linear-gradient(180deg, var(--light-gray) 0%, var(--white) 100%);
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      color: var(--text-dark);
+      line-height: 1.6;
+    }
+
+    /* Header with logos */
+    .header {
+      background: var(--white);
+      border-bottom: 3px solid var(--primary-blue);
+      box-shadow: var(--shadow-sm);
+      padding: 20px 0;
+    }
+
+    .header-content {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 30px;
+      flex-wrap: wrap;
+    }
+
+    .logos {
+      display: flex;
+      align-items: center;
+      gap: 25px;
+      flex-wrap: wrap;
+    }
+
+    .logo {
+      height: 70px;
+      width: auto;
+      display: block;
+      transition: transform 0.2s ease;
+    }
+
+    .logo:hover {
+      transform: translateY(-2px);
+    }
+
+    .logo-divider {
+      width: 1px;
+      height: 50px;
+      background: var(--border-gray);
+      margin: 0 5px;
+    }
+
+    /* Main content wrapper */
+    .wrap {
+      max-width: 980px;
+      margin: 40px auto;
+      padding: 0 20px;
+    }
+
+    /* Hero section */
+    .hero {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    h1 {
+      color: var(--primary-blue);
+      font-size: 2.2rem;
+      font-weight: 700;
+      margin: 0 0 10px 0;
+      letter-spacing: -0.5px;
+    }
+
+    .subtitle {
+      color: var(--text-light);
+      font-size: 1.1rem;
+      max-width: 700px;
+      margin: 0 auto;
+    }
+
+    /* Main card */
+    .card {
+      background: var(--white);
+      border: 1px solid var(--border-gray);
+      border-radius: 12px;
+      padding: 30px;
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Dropzone */
+    .dropzone {
+      border: 2px dashed var(--primary-blue);
+      border-radius: 12px;
+      padding: 40px 20px;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(0,61,165,0.02) 0%, rgba(0,61,165,0.05) 100%);
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .dropzone:hover {
+      background: linear-gradient(135deg, rgba(0,61,165,0.04) 0%, rgba(0,61,165,0.08) 100%);
+      border-color: var(--secondary-blue);
+    }
+
+    .dropzone.drag {
+      border-color: var(--accent-red);
+      background: linear-gradient(135deg, rgba(220,20,60,0.05) 0%, rgba(220,20,60,0.1) 100%);
+      box-shadow: 0 0 0 4px rgba(220,20,60,0.1);
+    }
+
+    .dropzone:focus {
+      outline: 3px solid var(--primary-blue);
+      outline-offset: 2px;
+    }
+
+    .dz-icon {
+      font-size: 3rem;
+      color: var(--primary-blue);
+      margin-bottom: 15px;
+    }
+
+    .dz-title {
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: var(--text-dark);
+      margin-bottom: 8px;
+    }
+
+    .dz-hint {
+      color: var(--text-muted);
+      font-size: 0.95rem;
+    }
+
+    /* File metadata */
+    .meta {
+      margin-top: 15px;
+      padding: 12px 15px;
+      background: var(--light-gray);
+      border-radius: 8px;
+      color: var(--text-light);
+      font-size: 0.95rem;
+      border-left: 4px solid var(--primary-blue);
+    }
+
+    /* Advanced settings */
+    details {
+      margin-top: 20px;
+      border: 1px solid var(--border-gray);
+      border-radius: 8px;
+      background: var(--white);
+      overflow: hidden;
+    }
+
+    details > summary {
+      padding: 15px;
+      cursor: pointer;
+      font-weight: 600;
+      color: var(--text-dark);
+      background: var(--light-gray);
+      border-bottom: 1px solid var(--border-gray);
+      transition: background 0.2s ease;
+      user-select: none;
+    }
+
+    details > summary:hover {
+      background: var(--medium-gray);
+    }
+
+    details[open] > summary {
+      background: var(--primary-blue);
+      color: var(--white);
+      border-bottom-color: var(--primary-blue);
+    }
+
+    details > div {
+      padding: 20px;
+    }
+
+    /* Form controls */
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 15px;
+    }
+
+    @media (max-width: 640px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    label {
+      display: block;
+      font-weight: 500;
+      color: var(--text-dark);
+      margin-bottom: 5px;
+      font-size: 0.9rem;
+    }
+
+    select, input[type="text"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border-gray);
+      border-radius: 6px;
+      font-size: 1rem;
+      background: var(--white);
+      color: var(--text-dark);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    }
+
+    select:focus, input[type="text"]:focus {
+      outline: none;
+      border-color: var(--primary-blue);
+      box-shadow: 0 0 0 3px rgba(0,61,165,0.1);
+    }
+
+    input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      margin-right: 8px;
+      cursor: pointer;
+    }
+
+    .checkbox-group {
+      display: flex;
+      align-items: center;
+      padding-top: 28px;
+    }
+
+    .checkbox-group label {
+      margin-bottom: 0;
+      cursor: pointer;
+    }
+
+    /* Buttons */
+    .row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      border: none;
+      text-decoration: none;
+    }
+
+    .btn-primary {
+      background: var(--primary-blue);
+      color: var(--white);
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: var(--secondary-blue);
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .btn-secondary {
+      background: var(--white);
+      color: var(--primary-blue);
+      border: 2px solid var(--primary-blue);
+    }
+
+    .btn-secondary:hover {
+      background: var(--light-gray);
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    /* Enhanced Progress bar */
+    .progress-wrapper {
+      margin-top: 25px;
+      padding: 20px;
+      background: linear-gradient(135deg, rgba(0,61,165,0.03) 0%, rgba(0,45,114,0.06) 100%);
+      border-radius: 12px;
+      border: 1px solid rgba(0,61,165,0.1);
+      position: relative;
+      transition: all 0.3s ease;
+    }
+
+    .progress-wrapper.active {
+      background: linear-gradient(135deg, rgba(0,61,165,0.05) 0%, rgba(0,45,114,0.08) 100%);
+      box-shadow: 0 4px 20px rgba(0,61,165,0.1);
+    }
+
+    .progress-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
+
+    .progress-label {
+      color: var(--text-dark);
+      font-weight: 600;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .progress-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
+      background: var(--white);
+      border-radius: 100px;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+      border: 1px solid var(--border-gray);
+      transition: all 0.3s ease;
+    }
+
+    .progress-status.uploading {
+      color: var(--primary-blue);
+      background: rgba(0,61,165,0.1);
+      border-color: var(--primary-blue);
+    }
+
+    .progress-status.processing {
+      color: var(--secondary-blue);
+      background: rgba(0,45,114,0.1);
+      border-color: var(--secondary-blue);
+    }
+
+    .progress-status.complete {
+      color: var(--success);
+      background: rgba(40,167,69,0.1);
+      border-color: var(--success);
+    }
+
+    /* Progress indicator dot animation */
+    .progress-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      background: currentColor;
+      border-radius: 50%;
+      animation: pulse 1.5s ease-in-out infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 0.3; transform: scale(0.8); }
+      50% { opacity: 1; transform: scale(1); }
+    }
+
+    .progress {
+      height: 24px;
+      background: var(--white);
+      border: 1px solid var(--border-gray);
+      border-radius: 100px;
+      overflow: hidden;
+      margin-bottom: 10px;
+      position: relative;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    .bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(135deg, var(--primary-blue) 0%, var(--secondary-blue) 100%);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+      border-radius: 100px;
+      box-shadow: 0 2px 8px rgba(0,61,165,0.3);
+    }
+
+    /* Animated stripes for active processing */
+    .bar.processing {
+      background: linear-gradient(
+        135deg,
+        var(--primary-blue) 0%,
+        var(--secondary-blue) 100%
+      );
+      background-size: 100% 100%;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .bar.processing::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(
+        90deg,
+        transparent 0%,
+        rgba(255,255,255,0.15) 25%,
+        rgba(255,255,255,0.3) 50%,
+        rgba(255,255,255,0.15) 75%,
+        transparent 100%
+      );
+      background-size: 50px 100%;
+      animation: shimmer 1.5s linear infinite;
+    }
+
+    @keyframes shimmer {
+      0% { transform: translateX(-100px); }
+      100% { transform: translateX(calc(100% + 100px)); }
+    }
+
+    /* Subtle glow effect on the bar edge */
+    .bar::after {
+      content: '';
+      position: absolute;
+      top: 50%;
+      right: 0;
+      width: 4px;
+      height: 60%;
+      background: rgba(255,255,255,0.6);
+      border-radius: 2px;
+      transform: translateY(-50%);
+      box-shadow: 0 0 10px rgba(255,255,255,0.5);
+      animation: glow 1.5s ease-in-out infinite;
+    }
+
+    @keyframes glow {
+      0%, 100% { opacity: 0.6; }
+      50% { opacity: 1; }
+    }
+
+    .progress-details {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      color: var(--text-muted);
+      font-size: 0.9rem;
+    }
+
+    .progress-percentage {
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: var(--primary-blue);
+      font-variant-numeric: tabular-nums;
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+    }
+
+    .progress-percentage span {
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .progress-time {
+      font-size: 0.85rem;
+      color: var(--text-light);
+      font-variant-numeric: tabular-nums;
+    }
+
+    /* Hide progress wrapper initially */
+    .progress-wrapper {
+      display: none;
+      opacity: 0;
+      transform: translateY(-10px);
+    }
+
+    .progress-wrapper.show {
+      display: block;
+      animation: slideIn 0.3s ease forwards;
+    }
+
+    @keyframes slideIn {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 640px) {
+      .progress-wrapper {
+        padding: 15px;
+      }
+
+      .progress {
+        height: 20px;
+      }
+
+      .progress-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+      }
+
+      .progress-status {
+        font-size: 0.8rem;
+        padding: 3px 8px;
+      }
+    }
+
+    /* Status messages */
+    .status {
+      margin-top: 15px;
+      padding: 12px 15px;
+      border-radius: 6px;
+      font-size: 0.95rem;
+      display: none;
+    }
+
+    .status:not(:empty) {
+      display: block;
+    }
+
+    .status.ok {
+      background: rgba(40,167,69,0.1);
+      color: var(--success);
+      border-left: 4px solid var(--success);
+    }
+
+    .status.warn {
+      background: rgba(255,193,7,0.1);
+      color: #856404;
+      border-left: 4px solid var(--warning);
+    }
+
+    .status.err {
+      background: rgba(220,53,69,0.1);
+      color: var(--danger);
+      border-left: 4px solid var(--danger);
+    }
+
+    /* Preview panel */
+    .panel {
+      margin-top: 20px;
+    }
+
+    pre {
+      white-space: pre-wrap;
+      word-wrap: break-word;
+      background: var(--light-gray);
+      border: 1px solid var(--border-gray);
+      border-radius: 8px;
+      padding: 15px;
+      max-height: 400px;
+      overflow: auto;
+      font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .truncate-notice {
+      margin-top: 10px;
+      padding: 10px 15px;
+      background: rgba(0,61,165,0.05);
+      border-left: 4px solid var(--primary-blue);
+      border-radius: 6px;
+      color: var(--text-light);
+      font-size: 0.9rem;
+      font-style: italic;
+    }
+
+    /* Download link */
+    .dl {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: var(--success);
+      color: var(--white);
+      border-radius: 6px;
+      text-decoration: none;
+      font-weight: 500;
+      transition: all 0.2s ease;
+    }
+
+    .dl:hover {
+      background: #218838;
+      transform: translateY(-1px);
+      box-shadow: var(--shadow-md);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 60px;
+      padding: 40px 20px;
+      background: var(--light-gray);
+      border-top: 1px solid var(--border-gray);
+      text-align: center;
+    }
+
+    .footer-text {
+      max-width: 800px;
+      margin: 0 auto;
+      color: var(--text-light);
+      font-size: 0.95rem;
+      line-height: 1.6;
+    }
+
+    .footer-text a {
+      color: var(--primary-blue);
+      text-decoration: none;
+      font-weight: 500;
+      transition: color 0.2s ease;
+    }
+
+    .footer-text a:hover {
+      color: var(--secondary-blue);
+      text-decoration: underline;
+    }
+
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .header-content {
+        justify-content: center;
+      }
+
+      .logos {
+        justify-content: center;
+      }
+
+      .logo {
+        height: 60px;
+      }
+
+      h1 {
+        font-size: 1.8rem;
+      }
+
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Header with institutional logos -->
+  <header class="header">
+    <div class="header-content">
+      <div class="logos">
+        <img src="image-1.png" alt="CUNY Logo" class="logo" />
+        <div class="logo-divider"></div>
+        <img src="image-2.png" alt="New Media Lab Logo" class="logo" />
+        <div class="logo-divider"></div>
+        <img src="image-3.png" alt="American Social History Project Logo" class="logo" />
+      </div>
+    </div>
+  </header>
+
+  <div class="wrap">
+    <!-- Hero section -->
+    <div class="hero">
+      <h1>New Media Lab Whisper Transcriber</h1>
+      <p class="subtitle">Upload audio/video and get SRT/VTT/TXT via the New Media Lab's Whisper Server.</p>
+    </div>
+
+    <!-- Main card -->
+    <div class="card">
+      <input id="file" type="file" accept="audio/*,video/*" hidden />
+
+      <!-- Dropzone -->
+      <div id="drop" class="dropzone" tabindex="0" role="button" aria-label="Upload area">
+        <div class="dz-icon">📁</div>
+        <div class="dz-title">Drag & drop a file here, or click to browse</div>
+        <div class="dz-hint">Supports MP3, M4A, WAV, MP4, and other audio/video formats</div>
+      </div>
+
+      <!-- File metadata -->
+      <div id="filemeta" class="meta" style="display:none"></div>
+
+      <!-- Advanced settings -->
+      <details id="adv">
+        <summary>Advanced Settings</summary>
+        <div>
+          <div class="grid">
+            <div>
+              <label for="model">Model</label>
+              <select id="model">
+                <option>Systran/faster-distil-whisper-large-v3</option>
+                <option>Systran/faster-whisper-large-v3</option>
+                <option>Systran/faster-whisper-medium</option>
+                <option>Systran/faster-whisper-small</option>
+                <option>Systran/faster-whisper-tiny</option>
+              </select>
+            </div>
+            <div>
+              <label for="format">Response Format</label>
+              <select id="format">
+                <option value="srt">SRT (Subtitles)</option>
+                <option value="vtt">VTT (WebVTT)</option>
+                <option value="text">Plain Text</option>
+                <option value="json">JSON</option>
+                <option value="verbose_json">Verbose JSON</option>
+              </select>
+            </div>
+            <div>
+              <label for="lang">Language (Optional)</label>
+              <input id="lang" type="text" placeholder="e.g., en, es, fr, it..." />
+            </div>
+            <div class="checkbox-group">
+              <input id="vad" type="checkbox" checked />
+              <label for="vad">Enable VAD filtering and chunking</label>
+            </div>
+          </div>
+        </div>
+      </details>
+
+      <!-- Action buttons -->
+      <div class="row">
+        <button id="go" class="btn btn-primary" disabled>
+          <span>Transcribe</span>
+        </button>
+        <button id="clear" class="btn btn-secondary">Clear</button>
+      </div>
+
+      <!-- Enhanced Progress bar -->
+      <div class="progress-wrapper" id="progress-wrapper">
+        <div class="progress-header">
+          <div class="progress-label">
+            <span id="progress-label-text">Progress</span>
+          </div>
+          <div class="progress-status" id="progress-status">
+            <span class="progress-dot"></span>
+            <span id="progress-status-text">Ready</span>
+          </div>
+        </div>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+          <div class="bar" id="bar"></div>
+        </div>
+        <div class="progress-details">
+          <div class="progress-percentage">
+            <span id="pct">0</span><span>%</span>
+          </div>
+          <div class="progress-time" id="progress-time"></div>
+        </div>
+      </div>
+
+      <!-- Status message -->
+      <div id="status" class="status" aria-live="polite"></div>
+
+      <!-- Download links and preview -->
+      <div class="panel" id="links"></div>
+      <div class="panel" id="preview"></div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <div class="footer-text">
+      This tool was developed as part of the CUNY AI Lab, a project coordinated by the <a href="https://ashp.cuny.edu" target="_blank" rel="noopener">American Social History Project/Center for Media and Learning</a>, <a href="https://cuny.is/gcdi" target="_blank" rel="noopener">Graduate Center Digital Initiatives</a>, the <a href="https://library.gc.cuny.edu/" target="_blank" rel="noopener">Mina Rees Library</a>, and the <a href="https://tlc.commons.gc.cuny.edu/" target="_blank" rel="noopener">Teaching and Learning Center</a>.
+    </div>
+  </footer>
+
+  <script>
+    const $ = (id) => document.getElementById(id);
+    const fileEl = $('file');
+    const drop = $('drop');
+    const filemeta = $('filemeta');
+    const modelEl=$('model'), fmtEl=$('format'), langEl=$('lang'), vadEl=$('vad');
+    const goEl=$('go'), clearEl=$('clear'), barEl=$('bar'), pctEl=$('pct');
+    const statusEl=$('status'), linksEl=$('links'), previewEl=$('preview');
+    const progressWrapper = $('progress-wrapper');
+    const progressStatus = $('progress-status');
+    const progressStatusText = $('progress-status-text');
+    const progressLabelText = $('progress-label-text');
+    const progressTime = $('progress-time');
+    const progressEl = progressWrapper.querySelector('.progress');
+
+    // Remember last choices
+    const LS = 'asr.settings.v1';
+    const loadLS = () => {
+      try {
+        const j=JSON.parse(localStorage.getItem(LS)||'{}');
+        if(j.model) modelEl.value=j.model;
+        if(j.format) fmtEl.value=j.format;
+        if(j.lang) langEl.value=j.lang;
+        if(typeof j.vad==='boolean') vadEl.checked=j.vad;
+      } catch {}
+    };
+    const saveLS = () => {
+      const o={
+        model:modelEl.value,
+        format:fmtEl.value,
+        lang:langEl.value.trim(),
+        vad:vadEl.checked
+      };
+      localStorage.setItem(LS, JSON.stringify(o));
+    };
+    loadLS();
+
+    const human = (n) => {
+      const u=['B','KB','MB','GB'];
+      let i=0;
+      while(n>=1024 && i<u.length-1){n/=1024;i++;}
+      return (Math.round(n*10)/10)+' '+u[i];
+    };
+
+    let selFile = null;
+    let uploadStartTime = null;
+    let processingStartTime = null;
+
+    function setProgress(p, status = 'idle'){
+      const percent = Math.max(0, Math.min(100, p));
+      barEl.style.width = percent + '%';
+      pctEl.textContent = Math.round(percent);
+      progressEl.setAttribute('aria-valuenow', percent);
+
+      // Show/hide progress wrapper with animation
+      if (percent > 0 || status !== 'idle') {
+        progressWrapper.classList.add('show');
+        progressWrapper.classList.add('active');
+      } else if (percent === 0 && status === 'idle') {
+        progressWrapper.classList.remove('active');
+      }
+
+      // Update progress bar styling based on status
+      if (status === 'uploading' || status === 'processing') {
+        barEl.classList.add('processing');
+      } else {
+        barEl.classList.remove('processing');
+      }
+
+      // Update status indicator
+      updateProgressStatus(status, percent);
+
+      // Update time display
+      updateProgressTime(status);
+    }
+
+    function updateProgressStatus(status, percent) {
+      progressStatus.className = 'progress-status';
+
+      switch(status) {
+        case 'uploading':
+          progressStatus.classList.add('uploading');
+          progressStatusText.textContent = 'Uploading';
+          progressLabelText.textContent = 'Upload Progress';
+          break;
+        case 'processing':
+          progressStatus.classList.add('processing');
+          progressStatusText.textContent = 'Processing';
+          progressLabelText.textContent = 'Transcription Progress';
+          break;
+        case 'complete':
+          progressStatus.classList.add('complete');
+          progressStatusText.textContent = 'Complete';
+          progressLabelText.textContent = 'Completed';
+          break;
+        default:
+          progressStatusText.textContent = 'Ready';
+          progressLabelText.textContent = 'Progress';
+      }
+    }
+
+    function updateProgressTime(status) {
+      let elapsed = 0;
+
+      if (status === 'uploading' && uploadStartTime) {
+        elapsed = Math.floor((Date.now() - uploadStartTime) / 1000);
+        progressTime.textContent = 'Uploading: ' + formatTime(elapsed);
+      } else if (status === 'processing' && processingStartTime) {
+        elapsed = Math.floor((Date.now() - processingStartTime) / 1000);
+        progressTime.textContent = 'Processing: ' + formatTime(elapsed);
+      } else if (status === 'complete') {
+        if (processingStartTime && uploadStartTime) {
+          const totalTime = Math.floor((Date.now() - uploadStartTime) / 1000);
+          progressTime.textContent = 'Total time: ' + formatTime(totalTime);
+        }
+      } else {
+        progressTime.textContent = '';
+      }
+    }
+
+    function formatTime(seconds) {
+      if (seconds < 60) return seconds + 's';
+      const mins = Math.floor(seconds / 60);
+      const secs = seconds % 60;
+      return mins + 'm ' + secs + 's';
+    }
+
+    function setBusy(b){
+      goEl.disabled = b || !selFile;
+      modelEl.disabled=b;
+      fmtEl.disabled=b;
+      langEl.disabled=b;
+      vadEl.disabled=b;
+      drop.setAttribute('aria-busy', b?'true':'false');
+    }
+
+    function setStatus(txt, cls){
+      statusEl.className = 'status ' + (cls||'');
+      statusEl.textContent = txt;
+    }
+
+    function showMeta(){
+      if(!selFile){
+        filemeta.style.display='none';
+        return;
+      }
+      filemeta.style.display='block';
+      filemeta.innerHTML = `<strong>${selFile.name}</strong> — ${human(selFile.size)} (${selFile.type||'application/octet-stream'})`;
+    }
+
+    function pickFile(f){
+      selFile=f;
+      showMeta();
+      goEl.disabled=!selFile;
+      setStatus('', '');
+    }
+
+    // Click-to-browse via hidden input
+    drop.addEventListener('click', () => fileEl.click());
+    drop.addEventListener('keydown', (e)=>{
+      if(e.key==='Enter' || e.key===' '){
+        e.preventDefault();
+        fileEl.click();
+      }
+    });
+
+    // Drag & drop
+    ['dragenter','dragover'].forEach(ev=>drop.addEventListener(ev, (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      drop.classList.add('drag');
+    }));
+    ['dragleave','drop'].forEach(ev=>drop.addEventListener(ev, (e)=>{
+      e.preventDefault();
+      e.stopPropagation();
+      drop.classList.remove('drag');
+    }));
+    drop.addEventListener('drop', (e)=>{
+      const f=e.dataTransfer.files?.[0];
+      if(f) pickFile(f);
+    });
+
+    fileEl.addEventListener('change', ()=>{
+      if(fileEl.files[0]) pickFile(fileEl.files[0]);
+    });
+
+    clearEl.addEventListener('click', ()=>{
+      selFile=null;
+      fileEl.value='';
+      showMeta();
+      goEl.disabled=true;
+      linksEl.innerHTML='';
+      previewEl.innerHTML='';
+      setProgress(0, 'idle');
+      setStatus('','');
+      uploadStartTime = null;
+      processingStartTime = null;
+      progressWrapper.classList.remove('show', 'active');
+    });
+
+    function extFor(fmt){
+      if (fmt==='srt') return 'srt';
+      if (fmt==='vtt') return 'vtt';
+      if (fmt==='text') return 'txt';
+      if (fmt==='json') return 'json';
+      if (fmt==='verbose_json') return 'json';
+      return 'txt';
+    }
+
+    goEl.addEventListener('click', async ()=>{
+      saveLS();
+      if(!selFile){
+        setStatus('Please choose a file first','warn');
+        return;
+      }
+      linksEl.innerHTML='';
+      previewEl.innerHTML='';
+      setStatus('Uploading file...','');
+      setBusy(true);
+
+      // Initialize timing
+      uploadStartTime = Date.now();
+      processingStartTime = null;
+      setProgress(2, 'uploading');
+
+      // Set up periodic time updates
+      const timeInterval = setInterval(() => {
+        if (uploadStartTime) {
+          updateProgressTime(processingStartTime ? 'processing' : 'uploading');
+        }
+      }, 1000);
+
+      const fd = new FormData();
+      fd.append('file', selFile, selFile.name);
+      fd.append('model', modelEl.value);
+      fd.append('response_format', fmtEl.value);
+      fd.append('vad_filter', vadEl.checked ? 'true' : 'false');
+      const lang = langEl.value.trim();
+      if (lang) fd.append('language', lang);
+
+      try{
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', '/asr/audio/transcriptions', true);
+        xhr.responseType = 'blob';
+
+        xhr.upload.onprogress = (e)=>{
+          if(e.lengthComputable){
+            const uploadPct = (e.loaded/e.total)*85;
+            setProgress(uploadPct, 'uploading');
+            if(uploadPct >= 85) {
+              processingStartTime = Date.now();
+              setStatus('Processing transcription...','');
+              setProgress(85, 'processing');
+            }
+          }
+        };
+
+        xhr.onerror = ()=>{
+          clearInterval(timeInterval);
+          setStatus('Network error occurred','err');
+          setBusy(false);
+          setProgress(0, 'idle');
+        };
+
+        xhr.ontimeout = ()=>{
+          clearInterval(timeInterval);
+          setStatus('Request timed out','err');
+          setBusy(false);
+          setProgress(0, 'idle');
+        };
+
+        xhr.timeout = 15*60*1000; // 15 min
+
+        xhr.onload = () => {
+          clearInterval(timeInterval);
+          setProgress(100, 'complete');
+
+          if(xhr.status < 200 || xhr.status >= 300){
+            const r = new FileReader();
+            r.onload = ()=>{
+              setStatus(`Error ${xhr.status}: ${r.result}`,'err');
+              setBusy(false);
+              setTimeout(() => {
+                setProgress(0, 'idle');
+                progressWrapper.classList.remove('active');
+              }, 3000);
+            };
+            r.readAsText(xhr.response);
+            return;
+          }
+
+          const ct = xhr.getResponseHeader('content-type') || 'text/plain';
+          const blob = xhr.response;
+          const outName = (selFile.name.replace(/\.[^.]+$/, '') || 'transcript') + '.' + extFor(fmtEl.value);
+          const url = URL.createObjectURL(blob);
+
+          const a = document.createElement('a');
+          a.href=url;
+          a.download=outName;
+          a.className='dl';
+          a.innerHTML=`📥 Download ${outName}`;
+          linksEl.innerHTML='';
+          linksEl.appendChild(a);
+
+          // Preview text-like responses
+          if(ct.includes('text') || ['srt','vtt','text','json','verbose_json'].includes(fmtEl.value)){
+            const r2 = new FileReader();
+            r2.onload = ()=>{
+              const fullText = (r2.result||'').toString();
+              const truncated = fullText.length > 9000;
+              const pre = document.createElement('pre');
+              pre.textContent = fullText.slice(0, 9000);
+              previewEl.innerHTML='<h3 style="margin-top:0;color:#003DA5;">Preview:</h3>';
+              previewEl.appendChild(pre);
+
+              if(truncated) {
+                const notice = document.createElement('div');
+                notice.className = 'truncate-notice';
+                notice.textContent = 'Preview truncated. Download the file to continue reading the full transcription.';
+                previewEl.appendChild(notice);
+              }
+            };
+            r2.readAsText(blob);
+          }
+
+          setStatus('Transcription completed successfully!','ok');
+          a.addEventListener('click',()=>setTimeout(()=>URL.revokeObjectURL(url),3000));
+          setBusy(false);
+
+          // Keep the complete status visible for a few seconds
+          setTimeout(() => {
+            progressWrapper.classList.remove('active');
+          }, 5000);
+        };
+        xhr.send(fd);
+      } catch(e){
+        clearInterval(timeInterval);
+        setStatus('Failed: ' + (e?.message||e),'err');
+        setBusy(false);
+        setProgress(0, 'idle');
+      }
+    });
+  </script>
+</body>
+</html>

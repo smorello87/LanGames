@@ -1,0 +1,54 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Logs
+*.log
+npm-debug.log*
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+*.tmp
+*.temp
+tmp/
+temp/
+
+# Generated content examples (optional - keep sample files)
+# Uncomment if you don't want to commit example JSON files
+# language-games-*.json
+
+# Screenshots (optional - keep for documentation)
+# *.png
+# *.jpg
+# *.gif
+
+# Documentation temp files
+*.md~
+.markdown-preview.html
+
+# Node modules (if you add build tooling later)
+node_modules/
+package-lock.json
+yarn.lock

@@ -1,0 +1,698 @@
+{
+  "language": "Spanish",
+  "difficulty": "beginner",
+  "timestamp": "2025-10-15T15:47:51.942Z",
+  "wordle": [
+    "gatos",
+    "leche",
+    "libro",
+    "comer",
+    "playa",
+    "verde",
+    "feliz",
+    "habla",
+    "dulce",
+    "tener",
+    "mucho",
+    "negro",
+    "perro",
+    "plaza",
+    "bella"
+  ],
+  "memory": {
+    "food": [
+      {
+        "word": "agua",
+        "english": "water"
+      },
+      {
+        "word": "pan",
+        "english": "bread"
+      },
+      {
+        "word": "leche",
+        "english": "milk"
+      },
+      {
+        "word": "manzana",
+        "english": "apple"
+      },
+      {
+        "word": "arroz",
+        "english": "rice"
+      },
+      {
+        "word": "huevo",
+        "english": "egg"
+      },
+      {
+        "word": "sopa",
+        "english": "soup"
+      },
+      {
+        "word": "pollo",
+        "english": "chicken"
+      },
+      {
+        "word": "queso",
+        "english": "cheese"
+      },
+      {
+        "word": "café",
+        "english": "coffee"
+      },
+      {
+        "word": "jugo",
+        "english": "juice"
+      },
+      {
+        "word": "pescado",
+        "english": "fish"
+      }
+    ],
+    "daily": [
+      {
+        "word": "dormir",
+        "english": "to sleep"
+      },
+      {
+        "word": "comer",
+        "english": "to eat"
+      },
+      {
+        "word": "beber",
+        "english": "to drink"
+      },
+      {
+        "word": "trabajar",
+        "english": "to work"
+      },
+      {
+        "word": "estudiar",
+        "english": "to study"
+      },
+      {
+        "word": "caminar",
+        "english": "to walk"
+      },
+      {
+        "word": "cocinar",
+        "english": "to cook"
+      },
+      {
+        "word": "leer",
+        "english": "to read"
+      },
+      {
+        "word": "escribir",
+        "english": "to write"
+      },
+      {
+        "word": "descansar",
+        "english": "to rest"
+      },
+      {
+        "word": "ducharse",
+        "english": "to shower"
+      },
+      {
+        "word": "vestirse",
+        "english": "to get dressed"
+      }
+    ],
+    "family": [
+      {
+        "word": "madre",
+        "english": "mother"
+      },
+      {
+        "word": "padre",
+        "english": "father"
+      },
+      {
+        "word": "hermana",
+        "english": "sister"
+      },
+      {
+        "word": "hermano",
+        "english": "brother"
+      },
+      {
+        "word": "abuelo",
+        "english": "grandfather"
+      },
+      {
+        "word": "abuela",
+        "english": "grandmother"
+      },
+      {
+        "word": "tío",
+        "english": "uncle"
+      },
+      {
+        "word": "tía",
+        "english": "aunt"
+      },
+      {
+        "word": "primo",
+        "english": "cousin"
+      },
+      {
+        "word": "hijo",
+        "english": "son"
+      },
+      {
+        "word": "hija",
+        "english": "daughter"
+      },
+      {
+        "word": "bebé",
+        "english": "baby"
+      }
+    ],
+    "school": [
+      {
+        "word": "libro",
+        "english": "book"
+      },
+      {
+        "word": "lápiz",
+        "english": "pencil"
+      },
+      {
+        "word": "profesor",
+        "english": "teacher"
+      },
+      {
+        "word": "escuela",
+        "english": "school"
+      },
+      {
+        "word": "clase",
+        "english": "class"
+      },
+      {
+        "word": "alumno",
+        "english": "student"
+      },
+      {
+        "word": "pizarra",
+        "english": "blackboard"
+      },
+      {
+        "word": "cuaderno",
+        "english": "notebook"
+      },
+      {
+        "word": "mochila",
+        "english": "backpack"
+      },
+      {
+        "word": "mesa",
+        "english": "desk"
+      },
+      {
+        "word": "papel",
+        "english": "paper"
+      },
+      {
+        "word": "tarea",
+        "english": "homework"
+      }
+    ],
+    "work": [
+      {
+        "word": "trabajo",
+        "english": "work"
+      },
+      {
+        "word": "oficina",
+        "english": "office"
+      },
+      {
+        "word": "reunión",
+        "english": "meeting"
+      },
+      {
+        "word": "jefe",
+        "english": "boss"
+      },
+      {
+        "word": "empleado",
+        "english": "employee"
+      },
+      {
+        "word": "empresa",
+        "english": "company"
+      },
+      {
+        "word": "salario",
+        "english": "salary"
+      },
+      {
+        "word": "horario",
+        "english": "schedule"
+      },
+      {
+        "word": "equipo",
+        "english": "team"
+      },
+      {
+        "word": "proyecto",
+        "english": "project"
+      },
+      {
+        "word": "correo",
+        "english": "email"
+      },
+      {
+        "word": "teléfono",
+        "english": "telephone"
+      }
+    ]
+  },
+  "verbTenses": [
+    {
+      "infinitive": "hablar",
+      "english": "to speak",
+      "conjugations": {
+        "yo": "hablo",
+        "tú": "hablas",
+        "él/ella": "habla",
+        "nosotros": "hablamos",
+        "vosotros": "habláis",
+        "ellos/ellas": "hablan"
+      }
+    },
+    {
+      "infinitive": "comer",
+      "english": "to eat",
+      "conjugations": {
+        "yo": "como",
+        "tú": "comes",
+        "él/ella": "come",
+        "nosotros": "comemos",
+        "vosotros": "coméis",
+        "ellos/ellas": "comen"
+      }
+    },
+    {
+      "infinitive": "vivir",
+      "english": "to live",
+      "conjugations": {
+        "yo": "vivo",
+        "tú": "vives",
+        "él/ella": "vive",
+        "nosotros": "vivimos",
+        "vosotros": "vivís",
+        "ellos/ellas": "viven"
+      }
+    },
+    {
+      "infinitive": "trabajar",
+      "english": "to work",
+      "conjugations": {
+        "yo": "trabajo",
+        "tú": "trabajas",
+        "él/ella": "trabaja",
+        "nosotros": "trabajamos",
+        "vosotros": "trabajáis",
+        "ellos/ellas": "trabajan"
+      }
+    },
+    {
+      "infinitive": "estudiar",
+      "english": "to study",
+      "conjugations": {
+        "yo": "estudio",
+        "tú": "estudias",
+        "él/ella": "estudia",
+        "nosotros": "estudiamos",
+        "vosotros": "estudiáis",
+        "ellos/ellas": "estudian"
+      }
+    },
+    {
+      "infinitive": "cantar",
+      "english": "to sing",
+      "conjugations": {
+        "yo": "canto",
+        "tú": "cantas",
+        "él/ella": "canta",
+        "nosotros": "cantamos",
+        "vosotros": "cantáis",
+        "ellos/ellas": "cantan"
+      }
+    },
+    {
+      "infinitive": "bailar",
+      "english": "to dance",
+      "conjugations": {
+        "yo": "bailo",
+        "tú": "bailas",
+        "él/ella": "baila",
+        "nosotros": "bailamos",
+        "vosotros": "bailáis",
+        "ellos/ellas": "bailan"
+      }
+    },
+    {
+      "infinitive": "beber",
+      "english": "to drink",
+      "conjugations": {
+        "yo": "bebo",
+        "tú": "bebes",
+        "él/ella": "bebe",
+        "nosotros": "bebemos",
+        "vosotros": "bebéis",
+        "ellos/ellas": "beben"
+      }
+    },
+    {
+      "infinitive": "correr",
+      "english": "to run",
+      "conjugations": {
+        "yo": "corro",
+        "tú": "corres",
+        "él/ella": "corre",
+        "nosotros": "corremos",
+        "vosotros": "corréis",
+        "ellos/ellas": "corren"
+      }
+    },
+    {
+      "infinitive": "aprender",
+      "english": "to learn",
+      "conjugations": {
+        "yo": "aprendo",
+        "tú": "aprendes",
+        "él/ella": "aprende",
+        "nosotros": "aprendemos",
+        "vosotros": "aprendéis",
+        "ellos/ellas": "aprenden"
+      }
+    },
+    {
+      "infinitive": "escribir",
+      "english": "to write",
+      "conjugations": {
+        "yo": "escribo",
+        "tú": "escribes",
+        "él/ella": "escribe",
+        "nosotros": "escribimos",
+        "vosotros": "escribís",
+        "ellos/ellas": "escriben"
+      }
+    },
+    {
+      "infinitive": "abrir",
+      "english": "to open",
+      "conjugations": {
+        "yo": "abro",
+        "tú": "abres",
+        "él/ella": "abre",
+        "nosotros": "abrimos",
+        "vosotros": "abrís",
+        "ellos/ellas": "abren"
+      }
+    },
+    {
+      "infinitive": "mirar",
+      "english": "to look",
+      "conjugations": {
+        "yo": "miro",
+        "tú": "miras",
+        "él/ella": "mira",
+        "nosotros": "miramos",
+        "vosotros": "miráis",
+        "ellos/ellas": "miran"
+      }
+    },
+    {
+      "infinitive": "escuchar",
+      "english": "to listen",
+      "conjugations": {
+        "yo": "escucho",
+        "tú": "escuchas",
+        "él/ella": "escucha",
+        "nosotros": "escuchamos",
+        "vosotros": "escucháis",
+        "ellos/ellas": "escuchan"
+      }
+    },
+    {
+      "infinitive": "vender",
+      "english": "to sell",
+      "conjugations": {
+        "yo": "vendo",
+        "tú": "vendes",
+        "él/ella": "vende",
+        "nosotros": "vendemos",
+        "vosotros": "vendéis",
+        "ellos/ellas": "venden"
+      }
+    },
+    {
+      "infinitive": "comprar",
+      "english": "to buy",
+      "conjugations": {
+        "yo": "compro",
+        "tú": "compras",
+        "él/ella": "compra",
+        "nosotros": "compramos",
+        "vosotros": "compráis",
+        "ellos/ellas": "compran"
+      }
+    },
+    {
+      "infinitive": "nadar",
+      "english": "to swim",
+      "conjugations": {
+        "yo": "nado",
+        "tú": "nadas",
+        "él/ella": "nada",
+        "nosotros": "nadamos",
+        "vosotros": "nadáis",
+        "ellos/ellas": "nadan"
+      }
+    },
+    {
+      "infinitive": "subir",
+      "english": "to go up",
+      "conjugations": {
+        "yo": "subo",
+        "tú": "subes",
+        "él/ella": "sube",
+        "nosotros": "subimos",
+        "vosotros": "subís",
+        "ellos/ellas": "suben"
+      }
+    },
+    {
+      "infinitive": "caminar",
+      "english": "to walk",
+      "conjugations": {
+        "yo": "camino",
+        "tú": "caminas",
+        "él/ella": "camina",
+        "nosotros": "caminamos",
+        "vosotros": "camináis",
+        "ellos/ellas": "caminan"
+      }
+    },
+    {
+      "infinitive": "lavar",
+      "english": "to wash",
+      "conjugations": {
+        "yo": "lavo",
+        "tú": "lavas",
+        "él/ella": "lava",
+        "nosotros": "lavamos",
+        "vosotros": "laváis",
+        "ellos/ellas": "lavan"
+      }
+    }
+  ],
+  "reflexiveVerbs": [
+    {
+      "infinitive": "lavarse",
+      "english": "to wash oneself",
+      "conjugations": {
+        "yo": "me lavo",
+        "tú": "te lavas",
+        "él/ella": "se lava",
+        "nosotros": "nos lavamos",
+        "vosotros": "os laváis",
+        "ellos/ellas": "se lavan"
+      }
+    },
+    {
+      "infinitive": "llamarse",
+      "english": "to call oneself",
+      "conjugations": {
+        "yo": "me llamo",
+        "tú": "te llamas",
+        "él/ella": "se llama",
+        "nosotros": "nos llamamos",
+        "vosotros": "os llamáis",
+        "ellos/ellas": "se llaman"
+      }
+    },
+    {
+      "infinitive": "despertarse",
+      "english": "to wake up",
+      "conjugations": {
+        "yo": "me despierto",
+        "tú": "te despiertas",
+        "él/ella": "se despierta",
+        "nosotros": "nos despertamos",
+        "vosotros": "os despertáis",
+        "ellos/ellas": "se despiertan"
+      }
+    },
+    {
+      "infinitive": "vestirse",
+      "english": "to get dressed",
+      "conjugations": {
+        "yo": "me visto",
+        "tú": "te vistes",
+        "él/ella": "se viste",
+        "nosotros": "nos vestimos",
+        "vosotros": "os vestís",
+        "ellos/ellas": "se visten"
+      }
+    },
+    {
+      "infinitive": "sentarse",
+      "english": "to sit down",
+      "conjugations": {
+        "yo": "me siento",
+        "tú": "te sientas",
+        "él/ella": "se sienta",
+        "nosotros": "nos sentamos",
+        "vosotros": "os sentáis",
+        "ellos/ellas": "se sientan"
+      }
+    },
+    {
+      "infinitive": "ducharse",
+      "english": "to shower",
+      "conjugations": {
+        "yo": "me ducho",
+        "tú": "te duchas",
+        "él/ella": "se ducha",
+        "nosotros": "nos duchamos",
+        "vosotros": "os ducháis",
+        "ellos/ellas": "se duchan"
+      }
+    },
+    {
+      "infinitive": "peinarse",
+      "english": "to comb one's hair",
+      "conjugations": {
+        "yo": "me peino",
+        "tú": "te peinas",
+        "él/ella": "se peina",
+        "nosotros": "nos peinamos",
+        "vosotros": "os peináis",
+        "ellos/ellas": "se peinan"
+      }
+    },
+    {
+      "infinitive": "acostarse",
+      "english": "to go to bed",
+      "conjugations": {
+        "yo": "me acuesto",
+        "tú": "te acuestas",
+        "él/ella": "se acuesta",
+        "nosotros": "nos acostamos",
+        "vosotros": "os acostáis",
+        "ellos/ellas": "se acuestan"
+      }
+    },
+    {
+      "infinitive": "levantarse",
+      "english": "to get up",
+      "conjugations": {
+        "yo": "me levanto",
+        "tú": "te levantas",
+        "él/ella": "se levanta",
+        "nosotros": "nos levantamos",
+        "vosotros": "os levantáis",
+        "ellos/ellas": "se levantan"
+      }
+    },
+    {
+      "infinitive": "cepillarse",
+      "english": "to brush oneself",
+      "conjugations": {
+        "yo": "me cepillo",
+        "tú": "te cepillas",
+        "él/ella": "se cepilla",
+        "nosotros": "nos cepillamos",
+        "vosotros": "os cepilláis",
+        "ellos/ellas": "se cepillan"
+      }
+    },
+    {
+      "infinitive": "quedarse",
+      "english": "to stay",
+      "conjugations": {
+        "yo": "me quedo",
+        "tú": "te quedas",
+        "él/ella": "se queda",
+        "nosotros": "nos quedamos",
+        "vosotros": "os quedáis",
+        "ellos/ellas": "se quedan"
+      }
+    },
+    {
+      "infinitive": "dormirse",
+      "english": "to fall asleep",
+      "conjugations": {
+        "yo": "me duermo",
+        "tú": "te duermes",
+        "él/ella": "se duerme",
+        "nosotros": "nos dormimos",
+        "vosotros": "os dormís",
+        "ellos/ellas": "se duermen"
+      }
+    },
+    {
+      "infinitive": "sentirse",
+      "english": "to feel",
+      "conjugations": {
+        "yo": "me siento",
+        "tú": "te sientes",
+        "él/ella": "se siente",
+        "nosotros": "nos sentimos",
+        "vosotros": "os sentís",
+        "ellos/ellas": "se sienten"
+      }
+    },
+    {
+      "infinitive": "irse",
+      "english": "to leave",
+      "conjugations": {
+        "yo": "me voy",
+        "tú": "te vas",
+        "él/ella": "se va",
+        "nosotros": "nos vamos",
+        "vosotros": "os vais",
+        "ellos/ellas": "se van"
+      }
+    },
+    {
+      "infinitive": "divertirse",
+      "english": "to have fun",
+      "conjugations": {
+        "yo": "me divierto",
+        "tú": "te diviertes",
+        "él/ella": "se divierte",
+        "nosotros": "nos divertimos",
+        "vosotros": "os divertís",
+        "ellos/ellas": "se divierten"
+      }
+    }
+  ]
+}

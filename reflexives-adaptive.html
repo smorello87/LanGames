@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Reflexive Verbs - LanGames</title>
+  <link rel="stylesheet" href="css/styles-v3.css">
+  <link rel="stylesheet" href="css/games-v3.css">
+  <link rel="stylesheet" href="css/adaptive-v3.css">
+  <style>
+    /* Spin the Wheel specific overrides */
+    .game-section {
+      text-align: center;
+      margin: var(--spacing-lg) 0;
+    }
+
+    .session-info {
+      background: var(--color-gray-100);
+      padding: var(--spacing-md);
+      border-radius: var(--border-radius-small);
+      margin-bottom: var(--spacing-lg);
+      text-align: center;
+    }
+
+    .session-info span {
+      display: inline-block;
+      margin: 0 var(--spacing-md);
+      font-weight: var(--font-weight-bold);
+      color: var(--color-italian-green);
+    }
+  </style>
+  <!-- Google tag (gtag.js) -->
+  <script async src="https://www.googletagmanager.com/gtag/js?id=G-QJL9EQGT3Y"></script>
+  <script>
+    window.dataLayer = window.dataLayer || [];
+    function gtag(){dataLayer.push(arguments);}
+    gtag('js', new Date());
+    gtag('config', 'G-QJL9EQGT3Y');
+  </script>
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <h1>LanGames - Reflexive Verbs</h1>
+    </div>
+  </header>
+  <nav>
+    <div class="hamburger" onclick="toggleMenu()">☰</div>
+    <div class="menu-items">
+      <a href="index.html">Home</a>
+      <a href="llm-settings.html">Settings</a>
+      <div class="dropdown" onclick="toggleDropdown(event)">
+        <a href="#">Games</a>
+        <div class="dropdown-content">
+          <a href="wordle-adaptive.html">Wordle</a>
+          <a href="memory-adaptive.html">Memory Game</a>
+          <a href="fiore-adaptive.html">Flower</a>
+          <a href="tenses-adaptive.html">Verb Tenses Wheel</a>
+          <a href="reflexives-adaptive.html" class="active">Reflexive Verbs Wheel</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+  <script>
+    function toggleMenu() {
+      const menu = document.querySelector('nav .menu-items');
+      menu.classList.toggle('show-menu');
+    }
+
+    function toggleDropdown(event) {
+      // Only toggle on mobile (when hamburger is visible)
+      if (window.innerWidth <= 600) {
+        event.stopPropagation();
+        const dropdown = event.currentTarget;
+        dropdown.classList.toggle('active');
+      }
+    }
+  </script>
+
+  <main class="container">
+    <div id="sessionInfo" class="session-info"></div>
+
+    <!-- Start Screen -->
+    <section id="startScreen" class="game-section">
+      <h2>Spin the Wheel - Reflexive Verbs</h2>
+      <p>Spin the wheel to get a random reflexive verb and subject pronoun, then conjugate it correctly!</p>
+      <p><em>Note: Reflexive verbs include pronouns like "me/te/se" (Spanish) or "mi/ti/si" (Italian).</em></p>
+      <button onclick="startGame()">Start Game</button>
+      <br><br>
+      <a href="llm-settings.html">Back to Settings</a>
+    </section>
+
+    <!-- Spin the Wheel Game Section -->
+    <section id="spin" class="game-section" style="display:none;">
+      <h2>Spin the Wheel - Reflexive Verbs</h2>
+      <canvas id="wheelCanvas" width="500" height="500"></canvas>
+      <button onclick="spinWheel()">Spin!</button>
+      <div id="spinResult" style="margin-top: 20px; font-size: 18px;"></div>
+      <div id="conjugationInput" style="margin-top:20px; display:none;">
+        <input type="text" id="userConjugation" placeholder="Enter conjugation" style="font-size: 16px;">
+        <button onclick="checkConjugation()">Submit</button>
+
+      <div id="spinFeedback" style="margin-top:10px; font-weight: bold;"></div>
+      <button onclick="goBack()">Back to Start</button>
+      <br><br>
+      <a href="llm-settings.html">Back to Settings</a>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-text">
+      <p>
+        Based on <a href="https://beatricecarnelutti.com/impariamo">Beatrice Carnelutti's Impariamo l'Italiano</a>
+      </p>
+      <p>
+        This tool was developed as part of the CUNY AI Lab, a project coordinated by the <a href="https://ashp.cuny.edu" target="_blank" rel="noopener">American Social History Project/Center for Media and Learning</a>, <a href="https://cuny.is/gcdi" target="_blank" rel="noopener">Graduate Center Digital Initiatives</a>, the <a href="https://library.gc.cuny.edu/" target="_blank" rel="noopener">Mina Rees Library</a>, and the <a href="https://tlc.commons.gc.cuny.edu/" target="_blank" rel="noopener">Teaching and Learning Center</a>.
+      </p>
+    </div>
+  </footer>
+
+  <!-- Load JavaScript modules -->
+  <script src="js/game-content-loader.js"></script>
+
+  <script>
+    // Custom content from LLM
+    let verbsData = [];
+    let subjects = ["io", "tu", "lui", "lei", "noi", "voi", "loro"];
+
+    // Canvas setup
+    const canvas = document.getElementById('wheelCanvas');
+    const ctx = canvas.getContext('2d');
+    const centerX = canvas.width / 2;
+    const centerY = canvas.height / 2;
+    const radius = 200;
+    const pointerAngleRad = Math.PI / 2;
+    let spinAngle = 0;
+    let spinSpeed = 0;
+    let spinning = false;
+    let currentVerb = null;
+    let currentSubject = "";
+
+    // Initialize
+    document.addEventListener('DOMContentLoaded', () => {
+      loadCustomContent();
+      displaySessionInfo();
+    });
+
+    function loadCustomContent() {
+      const content = GameContentLoader.loadContent();
+      if (content && content.reflexiveVerbs && content.reflexiveVerbs.length > 0) {
+        verbsData = content.reflexiveVerbs;
+
+        // Adapt subject pronouns based on language
+        const lang = content.language.toLowerCase();
+        if (lang === 'spanish') {
+          subjects = ["yo", "tú", "él", "ella", "nosotros", "vosotros", "ellos", "ellas"];
+        } else if (lang === 'french') {
+          subjects = ["je", "tu", "il", "elle", "nous", "vous", "ils", "elles"];
+        } else if (lang === 'german') {
+          subjects = ["ich", "du", "er", "sie", "wir", "ihr", "sie"];
+        } else if (lang === 'portuguese') {
+          subjects = ["eu", "tu", "ele", "ela", "nós", "vós", "eles", "elas"];
+        } else {
+          // Italian or default
+          subjects = ["io", "tu", "lui", "lei", "noi", "voi", "loro"];
+        }
+
+        console.log('Custom reflexive verbs loaded:', verbsData.length, 'verbs');
+      } else {
+        // No fallback - redirect to settings
+        alert('No content available. Please go to Settings and generate content first.');
+        window.location.href = 'llm-settings.html';
+        return;
+      }
+    }
+
+    function displaySessionInfo() {
+      const contentInfo = GameContentLoader.getContentInfo();
+      const infoDiv = document.getElementById('sessionInfo');
+
+      if (contentInfo) {
+        infoDiv.innerHTML = `
+          <span>Language: ${contentInfo.language}</span>
+          <span>Difficulty: ${contentInfo.difficulty}</span>
+        `;
+      } else {
+        infoDiv.innerHTML = '<span>Using default Italian content</span>';
+      }
+    }
+
+    function startGame() {
+      document.getElementById('startScreen').style.display = 'none';
+      document.getElementById('spin').style.display = 'block';
+
+      // Initialize wheel with current verbs
+      const numVerbs = verbsData.length;
+      const arc = (2 * Math.PI) / numVerbs;
+      spinAngle = pointerAngleRad - arc / 2;
+
+      drawWheel();
+    }
+
+    function drawWheel() {
+      const numVerbs = verbsData.length;
+      const arc = (2 * Math.PI) / numVerbs;
+
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      for (let i = 0; i < numVerbs; i++) {
+        const angle = spinAngle + i * arc;
+        ctx.beginPath();
+        ctx.fillStyle = getColor(i);
+        ctx.moveTo(centerX, centerY);
+        ctx.arc(centerX, centerY, radius, angle, angle + arc, false);
+        ctx.lineTo(centerX, centerY);
+        ctx.fill();
+
+        // Draw verb text
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate(angle + arc / 2);
+        ctx.textAlign = "right";
+        ctx.fillStyle = "#2c3e50";
+        ctx.font = "14px sans-serif";
+        ctx.fillText(verbsData[i].infinitive, radius - 10, 5);
+        ctx.restore();
+      }
+
+      // Center circle
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, 30, 0, 2 * Math.PI);
+      ctx.fillStyle = "#ecf0f1";
+      ctx.fill();
+      ctx.stroke();
+
+      // Draw pointer
+      drawPointer();
+    }
+
+    function drawPointer() {
+      ctx.beginPath();
+      const pointerWidth = 30;
+      const pointerHeight = 30;
+      ctx.moveTo(centerX, canvas.height - pointerHeight);
+      ctx.lineTo(centerX - pointerWidth / 2, canvas.height);
+      ctx.lineTo(centerX + pointerWidth / 2, canvas.height);
+      ctx.closePath();
+      ctx.fillStyle = "#e74c3c";
+      ctx.fill();
+    }
+
+    function getColor(i) {
+      const colors = ["#FFB6C1", "#87CEFA", "#90EE90", "#FFD700", "#FFA07A",
+                      "#DDA0DD", "#F08080", "#E0FFFF", "#98FB98", "#FF69B4"];
+      return colors[i % colors.length];
+    }
+
+    function spinWheel() {
+      if (spinning) return;
+      spinning = true;
+      spinSpeed = Math.random() * 0.3 + 0.3;
+
+      const spinInterval = setInterval(() => {
+        spinAngle += spinSpeed;
+        spinSpeed *= 0.99;
+        drawWheel();
+
+        if (spinSpeed < 0.002) {
+          clearInterval(spinInterval);
+          spinning = false;
+          selectVerb();
+        }
+      }, 20);
+    }
+
+    function selectVerb() {
+      const numVerbs = verbsData.length;
+      const arc = (2 * Math.PI) / numVerbs;
+      const normalizedSpin = ((spinAngle % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI);
+      const relativeAngle = (pointerAngleRad - normalizedSpin + 2 * Math.PI) % (2 * Math.PI);
+      let index = Math.floor(relativeAngle / arc);
+
+      if (index < 0 || index >= numVerbs) {
+        index = 0;
+      }
+
+      currentVerb = verbsData[index];
+      currentSubject = subjects[Math.floor(Math.random() * subjects.length)];
+
+      document.getElementById('spinResult').innerText =
+        `Conjugate "${currentVerb.infinitive}" (${currentVerb.english}) for subject "${currentSubject}":`;
+      document.getElementById('conjugationInput').style.display = "block";
+      document.getElementById('spinFeedback').innerText = "";
+
+      // Focus on input
+      document.getElementById('userConjugation').focus();
+    }
+
+    function checkConjugation() {
+      let userInput = document.getElementById('userConjugation').value.trim().toLowerCase();
+
+      if (!currentVerb || !currentSubject) {
+        return;
+      }
+
+      // Map individual pronouns to combined keys that LLM might use
+      function findConjugationKey(pronoun, conjugations) {
+        // Try exact match first
+        if (conjugations[pronoun]) return pronoun;
+
+        // Try capitalized version
+        const capitalized = pronoun.charAt(0).toUpperCase() + pronoun.slice(1);
+        if (conjugations[capitalized]) return capitalized;
+
+        // Try lowercase version
+        const lowercased = pronoun.toLowerCase();
+        if (conjugations[lowercased]) return lowercased;
+
+        // Check for combined keys like "él/ella" or "ellos/ellas"
+        for (const key of Object.keys(conjugations)) {
+          // Split on slash and check if pronoun matches any part
+          const parts = key.split('/').map(p => p.trim().toLowerCase());
+          if (parts.includes(pronoun.toLowerCase())) {
+            return key;
+          }
+        }
+
+        return null;
+      }
+
+      // Get correct answer from conjugations object
+      const conjugations = currentVerb.conjugations;
+      const conjugationKey = findConjugationKey(currentSubject, conjugations);
+
+      if (!conjugationKey) {
+        // Show available keys for debugging
+        console.error('Conjugation keys available:', Object.keys(conjugations));
+        console.error('Looking for:', currentSubject);
+        document.getElementById('spinFeedback').innerText =
+          `Error: No conjugation found for "${currentSubject}". Available pronouns: ${Object.keys(conjugations).join(', ')}`;
+        document.getElementById('spinFeedback').style.color = "orange";
+        return;
+      }
+
+      const correctAnswer = conjugations[conjugationKey];
+
+      // Check answer (case insensitive)
+      const correctLower = correctAnswer.toLowerCase();
+      const answerWithSubject = (currentSubject.toLowerCase() + " " + correctLower);
+
+      if (userInput === correctLower || userInput === answerWithSubject) {
+        document.getElementById('spinFeedback').innerText =
+          `✓ Correct! ${currentSubject} ${correctAnswer}`;
+        document.getElementById('spinFeedback').style.color = "green";
+      } else {
+        document.getElementById('spinFeedback').innerText =
+          `✗ Incorrect. The correct answer is: ${currentSubject} ${correctAnswer}`;
+        document.getElementById('spinFeedback').style.color = "red";
+      }
+
+      // Keep the feedback visible - DON'T hide the input yet
+      document.getElementById('userConjugation').value = "";
+      // Remove the line that hides the input - this was causing the disappearing result
+      // document.getElementById('conjugationInput').style.display = "none";
+    }
+
+    function goBack() {
+      document.getElementById('spin').style.display = "none";
+      document.getElementById('startScreen').style.display = "block";
+    }
+
+    // Allow Enter key to submit
+    document.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter' && document.getElementById('conjugationInput').style.display !== 'none') {
+        checkConjugation();
+      }
+    });
+  </script>
+</body>
+</html>
