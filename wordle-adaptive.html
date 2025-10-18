@@ -89,15 +89,11 @@
   <main class="container">
     <div id="sessionInfo" class="session-info"></div>
 
-    <!-- Level Selection Section -->
-    <section id="levelSelection" class="game-section">
-      <h2>Select Difficulty Level</h2>
-      <select id="levelSelect">
-        <option value="beginner">Beginner</option>
-        <option value="intermediate">Intermediate</option>
-        <option value="advanced">Advanced</option>
-      </select>
-      <br>
+    <!-- Start Screen -->
+    <section id="startScreen" class="game-section">
+      <h2>Wordle Game</h2>
+      <p>Guess the 5-letter word in 6 tries!</p>
+      <p>Each guess must be a valid 5-letter word.</p>
       <button onclick="startGame()">Start Game</button>
       <br><br>
       <a href="llm-settings.html">Back to Settings</a>
@@ -147,15 +143,8 @@
     function loadCustomContent() {
       const content = GameContentLoader.loadContent();
       if (content && content.wordle && content.wordle.length > 0) {
-        // Content is generated for a single difficulty level
-        // So we use the same words for all difficulty selections
-        const wordArray = content.wordle;
-        customWords = {
-          beginner: wordArray,
-          intermediate: wordArray,
-          advanced: wordArray
-        };
-        console.log('Custom content loaded successfully:', wordArray.length, 'words');
+        customWords = content.wordle;
+        console.log('Custom content loaded successfully:', customWords.length, 'words');
       } else {
         // No fallback - redirect to settings
         alert('No content available. Please go to Settings and generate content first.');
@@ -179,17 +168,14 @@
     }
 
     function chooseTarget() {
-      const level = document.getElementById("levelSelect").value;
-
-      if (!customWords || !customWords[level]) {
+      if (!customWords || customWords.length === 0) {
         alert('No content available. Please go to Settings and generate content first.');
         window.location.href = 'llm-settings.html';
         return;
       }
 
-      const pool = customWords[level];
-      const randomIndex = Math.floor(Math.random() * pool.length);
-      targetWord = pool[randomIndex].toUpperCase();
+      const randomIndex = Math.floor(Math.random() * customWords.length);
+      targetWord = customWords[randomIndex].toUpperCase();
       console.log("Target Word:", targetWord);
     }
 
@@ -265,10 +251,9 @@
     }
 
     function startGame() {
-      document.getElementById("levelSelection").style.display = "none";
+      document.getElementById("startScreen").style.display = "none";
       document.getElementById("wordleGame").style.display = "block";
-      const level = document.getElementById("levelSelect").value;
-      document.getElementById("gameTitle").innerText = "Wordle Game (" + level.charAt(0).toUpperCase() + level.slice(1) + ")";
+      document.getElementById("gameTitle").innerText = "Wordle Game";
       currentGuess = 0;
       chooseTarget();
       initBoard();

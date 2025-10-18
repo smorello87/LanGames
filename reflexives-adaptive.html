@@ -157,9 +157,19 @@
         } else if (lang === 'french') {
           subjects = ["je", "tu", "il", "elle", "nous", "vous", "ils", "elles"];
         } else if (lang === 'german') {
-          subjects = ["ich", "du", "er", "sie", "wir", "ihr", "sie"];
+          subjects = ["ich", "du", "er", "sie", "es", "wir", "ihr"];
         } else if (lang === 'portuguese') {
           subjects = ["eu", "tu", "ele", "ela", "nós", "vós", "eles", "elas"];
+        } else if (lang === 'russian') {
+          subjects = ["я", "ты", "он", "она", "мы", "вы", "они"];
+        } else if (lang === 'japanese') {
+          subjects = ["私", "あなた", "彼", "彼女", "私たち", "あなたたち", "彼ら"];
+        } else if (lang === 'chinese') {
+          subjects = ["我", "你", "他", "她", "我们", "你们", "他们"];
+        } else if (lang === 'korean') {
+          subjects = ["나", "너", "그", "그녀", "우리", "너희", "그들"];
+        } else if (lang === 'arabic') {
+          subjects = ["أنا", "أنت", "هو", "هي", "نحن", "أنتم", "هم"];
         } else {
           // Italian or default
           subjects = ["io", "tu", "lui", "lei", "noi", "voi", "loro"];
@@ -316,10 +326,10 @@
         const lowercased = pronoun.toLowerCase();
         if (conjugations[lowercased]) return lowercased;
 
-        // Check for combined keys like "él/ella" or "ellos/ellas"
+        // Check for combined keys like "él/ella", "ellos/ellas", or "er_sie_es", "sie_Sie"
         for (const key of Object.keys(conjugations)) {
-          // Split on slash and check if pronoun matches any part
-          const parts = key.split('/').map(p => p.trim().toLowerCase());
+          // Split on slash or underscore and check if pronoun matches any part
+          const parts = key.split(/[/_]/).map(p => p.trim().toLowerCase());
           if (parts.includes(pronoun.toLowerCase())) {
             return key;
           }
@@ -346,15 +356,22 @@
 
       // Check answer (case insensitive)
       const correctLower = correctAnswer.toLowerCase();
-      const answerWithSubject = (currentSubject.toLowerCase() + " " + correctLower);
 
-      if (userInput === correctLower || userInput === answerWithSubject) {
+      // For reflexive verbs, the answer might already include the subject pronoun
+      // Extract the verb part without the subject pronoun at the start
+      const subjectPattern = new RegExp(`^${currentSubject.toLowerCase()}\\s+`, 'i');
+      const verbPartOnly = correctLower.replace(subjectPattern, '').trim();
+
+      // Accept either:
+      // 1. Full answer with subject: "ich wasche mich"
+      // 2. Just the verb part: "wasche mich"
+      if (userInput === correctLower || userInput === verbPartOnly) {
         document.getElementById('spinFeedback').innerText =
-          `✓ Correct! ${currentSubject} ${correctAnswer}`;
+          `✓ Correct! ${correctAnswer}`;
         document.getElementById('spinFeedback').style.color = "green";
       } else {
         document.getElementById('spinFeedback').innerText =
-          `✗ Incorrect. The correct answer is: ${currentSubject} ${correctAnswer}`;
+          `✗ Incorrect. The correct answer is: ${correctAnswer}`;
         document.getElementById('spinFeedback').style.color = "red";
       }
 

@@ -183,12 +183,13 @@ canvas.spinning {
   /* Allow text to wrap at word boundaries for multi-word phrases */
   white-space: normal;
   overflow-wrap: break-word;
-  word-break: normal;
-  hyphens: manual;
+  word-break: break-word;
+  hyphens: auto;
 
-  /* Improved dynamic font sizing for better mobile readability */
-  font-size: clamp(0.6rem, 2vw, 0.9rem);
-  line-height: 1.2;
+  /* Improved dynamic font sizing for better readability */
+  /* Scales down further for very long words (12+ characters) */
+  font-size: clamp(0.5rem, 1.8vw, 0.85rem);
+  line-height: 1.15;
 
   /* Touch target */
   min-height: 44px;
@@ -702,12 +703,15 @@ canvas.spinning {
   .memory-card,
   .card {
     /* Better font sizing for mobile to fit more cards on screen */
-    font-size: clamp(0.55rem, 2.5vw, 0.8rem);
+    /* Scales down further for very long words */
+    font-size: clamp(0.45rem, 2.2vw, 0.75rem);
     padding: var(--spacing-xs);
     /* Allow proper text wrapping on mobile too */
     white-space: normal;
     overflow-wrap: break-word;
-    line-height: 1.15;
+    word-break: break-word;
+    hyphens: auto;
+    line-height: 1.1;
   }
 
   .wordle-board {

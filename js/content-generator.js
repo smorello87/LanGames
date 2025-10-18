@@ -51,16 +51,21 @@ const ContentGenerator = {
 
   // Generate Wordle words (15 words per difficulty)
   async generateWordleWords(language, difficulty, settings) {
-    const prompt = `Generate exactly 15 five-letter words in ${language} suitable for a ${difficulty} difficulty word game.
+    const prompt = `Generate exactly 15 words in ${language} suitable for a ${difficulty} difficulty word game.
+
+CRITICAL REQUIREMENT: Every single word MUST be exactly 5 letters long when written in ${language}. Count the letters carefully.
 
 Requirements:
-- All words must be exactly 5 letters long
+- Each word must be EXACTLY 5 letters long - no more, no less
+- For non-Latin alphabets (Cyrillic, Chinese, etc.), count characters in the native script
 - Words should be common, appropriate vocabulary for ${difficulty} level learners
-- No proper nouns, no slang
+- No proper nouns, no slang, no abbreviations
 - Include a mix of nouns, verbs, and adjectives
-- For beginner: very basic vocabulary
+- For beginner: very basic vocabulary (house, water, book, etc.)
 - For intermediate: common everyday words
 - For advanced: less common but still useful words
+
+VERIFY: Before returning, double-check that each word is exactly 5 letters long.
 
 Return ONLY a JSON array of strings, like this:
 ["word1", "word2", "word3", ...]
@@ -100,8 +105,20 @@ Requirements:
 - Target language: ${language}
 - Difficulty level: ${difficulty}
 - Each pair has one word in ${language} and its English translation
+- CRITICAL: Words must be SHORT - maximum 12 characters for ${language} words, maximum 14 characters for English
+- Use SINGLE WORDS only - no phrases with spaces (e.g., use "homework" not "home work", "breakfast" not "have breakfast")
+- If a concept requires multiple words, choose a simpler single-word alternative
 - Choose vocabulary appropriate for ${difficulty} level learners
 - Words should be relevant to the "${topicNames[topic]}" topic
+- Prefer shorter, concise vocabulary that fits well on cards
+
+Examples of good word pairs:
+- {"${language.toLowerCase()}": "яблоко", "english": "apple"} ✓
+- {"${language.toLowerCase()}": "работать", "english": "work"} ✓
+
+Examples of BAD word pairs (too long):
+- {"${language.toLowerCase()}": "собеседование", "english": "job interview"} ✗
+- {"${language.toLowerCase()}": "домашнее задание", "english": "homework assignment"} ✗
 
 Return ONLY a JSON array of objects in this exact format:
 [
@@ -189,18 +206,26 @@ Requirements:
 - Include the infinitive form and English translation
 - Include present tense conjugations for all persons with reflexive pronouns
 
+IMPORTANT - Conjugation Format for Reflexive Verbs:
+- Include the FULL conjugated form with both subject pronoun and reflexive pronoun
+- This ensures clarity about which reflexive pronoun to use (mich/dich/sich in German, me/te/se in Spanish, etc.)
+- Example for German: "ich": "ich wasche mich", "du": "du wäschst dich", "er_sie_es": "er/sie/es wäscht sich"
+- Example for Spanish: "yo": "yo me lavo", "tú": "tú te lavas", "él_ella": "él/ella se lava"
+- Example for Italian: "io": "io mi lavo", "tu": "tu ti lavi", "lui_lei": "lui/lei si lava"
+- For combined pronouns (like "er/sie/es"), include them in the value: "er/sie/es wäscht sich"
+
 Return ONLY a JSON array of objects in this exact format:
 [
   {
     "infinitive": "reflexive_verb_infinitive",
     "english": "english_translation",
     "conjugations": {
-      "io": "pronoun + verb_form",
-      "tu": "pronoun + verb_form",
-      "lui_lei": "pronoun + verb_form",
-      "noi": "pronoun + verb_form",
-      "voi": "pronoun + verb_form",
-      "loro": "pronoun + verb_form"
+      "io": "io mi lavo",
+      "tu": "tu ti lavi",
+      "lui_lei": "lui/lei si lava",
+      "noi": "noi ci laviamo",
+      "voi": "voi vi lavate",
+      "loro": "loro si lavano"
     }
   },
   ...
