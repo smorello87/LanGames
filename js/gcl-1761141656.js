@@ -266,40 +266,21 @@ const GameContentLoader = {
     return out.join('');
   },
 
-  // Encode content to compressed Base64 for URL sharing
+  // Encode content to Base64 for URL sharing (NO COMPRESSION - just base64)
   encodeContentForURL(content) {
     try {
       const jsonStr = JSON.stringify(content);
 
-      // Compress the JSON string (returns Uint16Array)
-      const compressed = this._compress(jsonStr);
-
-      // Pack Uint16Array into bytes efficiently
-      // Each 16-bit code takes 2 bytes
-      const bytes = new Uint8Array(compressed.length * 2);
-      for (let i = 0; i < compressed.length; i++) {
-        bytes[i * 2] = compressed[i] & 0xFF;        // Low byte
-        bytes[i * 2 + 1] = (compressed[i] >> 8) & 0xFF; // High byte
-      }
-
-      // Convert bytes to binary string
-      let binaryStr = '';
-      for (let i = 0; i < bytes.length; i++) {
-        binaryStr += String.fromCharCode(bytes[i]);
-      }
-
-      // Encode to base64 (URL-safe)
-      const base64 = btoa(binaryStr)
+      // Just encode to URL-safe base64, no compression
+      const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
 
-      console.log('Compression stats:', {
+      console.log('Encoding stats:', {
         original: jsonStr.length,
-        compressedCodes: compressed.length,
-        compressedBytes: bytes.length,
         base64: base64.length,
-        ratio: ((1 - base64.length / jsonStr.length) * 100).toFixed(1) + '%'
+        ratio: ((base64.length / jsonStr.length) * 100).toFixed(1) + '%'
       });
 
       return base64;
@@ -309,7 +290,7 @@ const GameContentLoader = {
     }
   },
 
-  // Decode content from compressed Base64 URL parameter
+  // Decode content from Base64 URL parameter (NO COMPRESSION)
   decodeContentFromURL(base64Str) {
     try {
       // Restore standard base64
@@ -318,25 +299,8 @@ const GameContentLoader = {
         base64 += '=';
       }
 
-      // Decode from base64 to binary string
-      const binaryStr = atob(base64);
-
-      // Convert binary string to Uint8Array
-      const bytes = new Uint8Array(binaryStr.length);
-      for (let i = 0; i < binaryStr.length; i++) {
-        bytes[i] = binaryStr.charCodeAt(i);
-      }
-
-      // Unpack bytes back to Uint16Array
-      // Each code is stored as 2 bytes (little-endian)
-      const codeCount = bytes.length / 2;
-      const compressed = new Uint16Array(codeCount);
-      for (let i = 0; i < codeCount; i++) {
-        compressed[i] = bytes[i * 2] | (bytes[i * 2 + 1] << 8);
-      }
-
-      // Decompress (takes Uint16Array, returns string)
-      const jsonStr = this._decompress(compressed);
+      // Decode from base64 and handle UTF-8
+      const jsonStr = decodeURIComponent(escape(atob(base64)));
 
       // Parse JSON
       const content = JSON.parse(jsonStr);
@@ -357,12 +321,10 @@ const GameContentLoader = {
 
       // Get current page URL without parameters
       const baseURL = window.location.origin + window.location.pathname.replace(/\/[^/]*$/, '/index.html');
-      const shareURL = `${baseURL}?content=${encoded}`;
+      // Use fragment (#) instead of query parameter (?) to bypass server URL length limits
+      const shareURL = `${baseURL}#content=${encoded}`;
 
-      // Check URL length (most browsers support ~2000 chars, but we'll warn at 1800)
-      if (shareURL.length > 1800) {
-        console.warn('Generated URL is quite long:', shareURL.length, 'characters');
-      }
+      console.log('Generated URL:', shareURL.length, 'characters');
 
       return shareURL;
     } catch (error) {
@@ -371,87 +333,70 @@ const GameContentLoader = {
     }
   },
 
-  // Shorten URL using free URL shortening API
+  // Shorten URL using PHP proxy (bypasses CORS)
   async shortenURL(longURL) {
-    // Try multiple free services in order
-    const services = [
-      {
-        name: 'ulvis.net',
-        url: `https://ulvis.net/API/write/get?url=${encodeURIComponent(longURL)}`,
-        parseResponse: async (response) => {
-          const data = await response.json();
-          if (data.success && data.data && data.data.url) {
-            return data.data.url;
-          }
-          throw new Error('Invalid response format');
-        }
-      },
-      {
-        name: 'is.gd',
-        url: `https://is.gd/create.php?format=json&url=${encodeURIComponent(longURL)}`,
-        parseResponse: async (response) => {
-          const data = await response.json();
-          if (data.shorturl) {
-            return data.shorturl;
-          }
-          throw new Error(data.errormessage || 'Invalid response format');
-        }
-      },
-      {
-        name: 'v.gd',
-        url: `https://v.gd/create.php?format=json&url=${encodeURIComponent(longURL)}`,
-        parseResponse: async (response) => {
-          const data = await response.json();
-          if (data.shorturl) {
-            return data.shorturl;
-          }
-          throw new Error(data.errormessage || 'Invalid response format');
-        }
+    try {
+      console.log('Shortening URL via PHP proxy...');
+
+      // Determine the correct proxy URL based on environment
+      let proxyURL;
+      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        // Local development - use local proxy
+        proxyURL = '/shorten-url.php';
+      } else {
+        // Production - use full URL to your server
+        proxyURL = 'https://stefanomorello.com/langames/shorten-url.php';
       }
-    ];
 
-    // Try each service in order
-    for (const service of services) {
-      try {
-        console.log(`Trying URL shortener: ${service.name}`);
+      const response = await fetch(proxyURL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url: longURL })
+      });
 
-        const response = await fetch(service.url);
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || `HTTP ${response.status}`);
+      }
 
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+      const data = await response.json();
 
-        const shortURL = await service.parseResponse(response);
-
-        // Validate response
-        if (!shortURL || !shortURL.startsWith('http')) {
-          throw new Error('Invalid URL returned');
-        }
-
-        console.log(`✅ URL shortened with ${service.name}:`, {
-          original: longURL.length,
-          shortened: shortURL.length,
-          saved: longURL.length - shortURL.length
+      if (data.success && data.shorturl) {
+        console.log(`✅ URL shortened with ${data.service}:`, {
+          original: data.original_length,
+          shortened: data.shortened_length,
+          saved: data.original_length - data.shortened_length
         });
-
-        return shortURL;
-      } catch (error) {
-        console.warn(`${service.name} failed:`, error.message);
-        // Continue to next service
+        return data.shorturl;
+      } else {
+        throw new Error(data.error || 'Unknown error');
       }
-    }
 
-    // All services failed
-    console.error('All URL shortening services failed');
-    return null; // Return null if shortening fails, caller can use long URL
+    } catch (error) {
+      console.error('URL shortening failed:', error.message);
+      return null; // Return null if shortening fails, caller can use long URL
+    }
   },
 
-  // Check for and load content from URL parameter
+  // Check for and load content from URL parameter or fragment
   loadContentFromURL() {
     try {
-      // Check for 'content' parameter in URL
-      const urlParams = new URLSearchParams(window.location.search);
-      const contentParam = urlParams.get('content');
+      let contentParam = null;
+
+      // First try fragment (new method - bypasses server URL limits)
+      if (window.location.hash) {
+        const hash = window.location.hash.substring(1); // Remove the #
+        const hashParams = new URLSearchParams(hash);
+        contentParam = hashParams.get('content');
+      }
+
+      // Fallback to query parameter (old method for backwards compatibility)
+      if (!contentParam) {
+        const urlParams = new URLSearchParams(window.location.search);
+        contentParam = urlParams.get('content');
+      }
 
       if (!contentParam) {
         return null;
@@ -487,9 +432,10 @@ const GameContentLoader = {
   initFromURL() {
     const urlContent = this.loadContentFromURL();
     if (urlContent) {
-      // Clean URL by removing the content parameter
+      // Clean URL by removing the content parameter and fragment
       const url = new URL(window.location);
       url.searchParams.delete('content');
+      url.hash = ''; // Remove fragment
       window.history.replaceState({}, '', url);
       return true;
     }

@@ -34,11 +34,15 @@ llm-version/
 ├── js/
 │   ├── llm-config.js            # API settings storage/validation
 │   ├── content-generator.js     # LLM API calls and content generation
-│   └── game-content-loader.js   # localStorage import/export
+│   └── gcl-1761141656.js        # Game content loader (localStorage, URL sharing)
 ├── flower/                       # Flower images (flower0.jpg - flower8.jpg)
+├── shorten-url.php               # PHP proxy for URL shortening (bypasses CORS)
+├── tests/                        # Development test files (gitignored, not deployed)
 └── docs/
     └── README.md                # Complete documentation
 ```
+
+**Note**: The `tests/` folder contains development test files and is excluded from deployment via `.gitignore`.
 
 ### Design System
 
@@ -88,6 +92,89 @@ All these MUST be defined in styles-v3.css for games to work properly:
 - `llm-settings`: API configuration (provider, endpoint, key, model)
 - `game-content`: Generated content (language, difficulty, all game data)
 
+### URL-Based Content Sharing with Automatic Shortening
+**For Teachers**: Share generated content with students via URL - no API key required for students!
+
+**How it works:**
+1. Teacher generates content in `llm-settings.html`
+2. Click "🔗 Share Link" button
+3. Modal shows progress bar while automatically shortening URL via server
+4. Wait 2-3 seconds → Short URL appears (e.g., `https://is.gd/abc123`)
+5. Copy and share the short link with students
+6. Students click the link → content automatically loads into their browser
+7. Students can play all 5 games without needing an API key!
+
+**Technical Details:**
+- Content is Base64-encoded: `#content=<base64-encoded-json>`
+- **CRITICAL: Uses URL fragment (`#`) not query parameter (`?`)** to bypass Apache "Request-URI Too Long" errors
+  - Fragments are NOT sent to server, only processed by browser JavaScript
+  - This allows ~13k character URLs to work without server rejection
+- Uses URL-safe Base64 encoding (replaces +/= with -_)
+- Typical URL length: ~12,700 characters (9,500 JSON → base64 expansion ~133%)
+- **Automatic URL Shortening**: PHP proxy on server bypasses CORS restrictions
+  - JavaScript calls `shorten-url.php` on your server
+  - PHP makes server-to-server API calls (no CORS)
+  - Tries multiple free services: is.gd (primary), v.gd, Clck.ru, dagd
+  - Final short URL is typically 20-30 characters
+  - No deprecated APIs - all services are actively maintained (as of 2025)
+- URL automatically parsed on page load via `GameContentLoader.initFromURL()`
+- Content is saved to student's localStorage for persistent access
+- URL fragment is removed from browser history for clean URLs
+
+**Files Updated:**
+- **`shorten-url.php`** (NEW): PHP proxy for URL shortening, bypasses CORS
+- `js/gcl-1761141656.js`: Updated `shortenURL()` to call PHP proxy instead of APIs directly
+- `llm-settings.html`: Automatic shortening workflow in modal
+- `index.html`: Checks for URL content on landing page
+- All game files: Call `GameContentLoader.initFromURL()` on page load
+- `css/adaptive-v3.css`: Modal and button styles for share UI
+- `css/styles-v3.css`: Added `--color-orange` variable
+
+**Share Modal UI (Three-State Design):**
+1. **Progress State**: Animated progress bar with gradient while shortening URL
+2. **Success State**: Shows shortened URL with copy button and instructions
+3. **Fallback State**: Shows long URL if shortening fails (service unavailable)
+
+**Security Note:**
+- API keys are NEVER included in share URLs - only generated content is shared
+- Warning in UI advises users not to generate content on shared/public computers
+- API configuration stays private in each user's browser localStorage
+
+**PHP Proxy Architecture:**
+```
+Browser → PHP Proxy → URL Shortener API
+(CORS OK)  (No CORS)  (Returns short URL)
+```
+
+**Why This Works:**
+- Browser can call PHP on same domain (no CORS)
+- PHP can call external APIs server-to-server (no CORS)
+- Uses cURL with 10-second timeout and fallback services
+- Handles errors gracefully - falls back to long URL if all services fail
+
+**Encoding Implementation:**
+```javascript
+// Simple Base64 encoding (no compression)
+const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
+  .replace(/\+/g, '-')
+  .replace(/\//g, '_')
+  .replace(/=+$/, '');
+```
+
+**Why Simple Base64 Encoding:**
+- Previous LZW compression attempts failed due to JavaScript's UTF-16 string handling
+- Simple Base64 is reliable and works with all Unicode (Cyrillic, CJK, Arabic)
+- Server-side URL shortening reduces final URL to ~20-30 chars regardless of encoding
+
+**Deployment Requirements:**
+- PHP 7.4+ with `curl` and `json` extensions
+- Upload `shorten-url.php` to server root alongside HTML files
+- See `DEPLOYMENT.md` for complete instructions
+
+**Alternative Methods:**
+- **Export/Import**: Download JSON file for manual sharing (no URL length limits)
+- **Direct localStorage**: For development/testing only
+
 ### No Fallback Content Rule
 **CRITICAL**: All games check for generated content on load. If no content exists:
 - Show alert: "No content available. Please go to Settings and generate content first."
@@ -97,12 +184,18 @@ All these MUST be defined in styles-v3.css for games to work properly:
 ## Development Commands
 
 ```bash
-# Open site locally
-open llm-version/index.html
+# Start PHP development server (RECOMMENDED - supports URL shortening)
+php -S localhost:8765
+# Navigate to http://localhost:8765/
 
-# Start local server (required for proper module loading)
-python3 -m http.server 8000
-# Navigate to http://localhost:8000/llm-version/
+# Alternative: Python server (URL shortening won't work)
+python3 -m http.server 8765
+# Navigate to http://localhost:8765/
+
+# Test URL shortening locally (requires PHP server)
+curl -X POST http://localhost:8765/shorten-url.php \
+  -H "Content-Type: application/json" \
+  -d '{"url":"https://example.com"}'
 
 # Clear generated content (browser console)
 localStorage.removeItem('game-content')
@@ -113,6 +206,11 @@ localStorage.removeItem('llm-settings')
 # Clear everything
 localStorage.clear()
 ```
+
+**Important**:
+- Use PHP server for full functionality including URL shortening
+- Python server works but share link button will fall back to long URLs
+- The JS automatically detects localhost and uses `/shorten-url.php` relative path
 
 ## Key Implementation Details
 
@@ -136,7 +234,8 @@ All HTML files link to CSS v3:
 ### Verb Conjugation Data Structure (CRITICAL)
 
 **Problem**: LLMs may return conjugation keys in different formats:
-- Combined: `"él/ella": "habla"` or `"ellos/ellas": "hablan"`
+- Combined with slash: `"él/ella": "habla"` or `"ellos/ellas": "hablan"`
+- Combined with underscore: `"er_sie_es": "spielt"` or `"sie_Sie": "spielen"` (German)
 - Individual: `"él": "habla"`, `"ella": "habla"` (separate keys)
 - Capitalized vs lowercase: `"Yo"` vs `"yo"`
 
@@ -155,9 +254,10 @@ function findConjugationKey(pronoun, conjugations) {
   const lowercased = pronoun.toLowerCase();
   if (conjugations[lowercased]) return lowercased;
 
-  // Check for combined keys like "él/ella" or "ellos/ellas"
+  // Check for combined keys like "él/ella", "ellos/ellas", or "er_sie_es", "sie_Sie"
   for (const key of Object.keys(conjugations)) {
-    const parts = key.split('/').map(p => p.trim().toLowerCase());
+    // Split on slash or underscore and check if pronoun matches any part
+    const parts = key.split(/[/_]/).map(p => p.trim().toLowerCase());
     if (parts.includes(pronoun.toLowerCase())) {
       return key;
     }
@@ -167,13 +267,109 @@ function findConjugationKey(pronoun, conjugations) {
 }
 ```
 
-**Subject Pronouns**: Include both masculine and feminine forms in the subject array:
+**Subject Pronouns**: Must include language-specific pronouns for all 10 supported languages:
 ```javascript
-// Spanish example
-subjects = ["yo", "tú", "él", "ella", "nosotros", "vosotros", "ellos", "ellas"];
+// Examples for each language
+if (lang === 'spanish') {
+  subjects = ["yo", "tú", "él", "ella", "nosotros", "vosotros", "ellos", "ellas"];
+} else if (lang === 'german') {
+  subjects = ["ich", "du", "er", "sie", "es", "wir", "ihr"];
+} else if (lang === 'russian') {
+  subjects = ["я", "ты", "он", "она", "мы", "вы", "они"];
+} else if (lang === 'japanese') {
+  subjects = ["私", "あなた", "彼", "彼女", "私たち", "あなたたち", "彼ら"];
+} else if (lang === 'chinese') {
+  subjects = ["我", "你", "他", "她", "我们", "你们", "他们"];
+} else if (lang === 'korean') {
+  subjects = ["나", "너", "그", "그녀", "우리", "너희", "그들"];
+} else if (lang === 'arabic') {
+  subjects = ["أنا", "أنت", "هو", "هي", "نحن", "أنتم", "هم"];
+}
+// Italian, French, Portuguese also defined
 ```
 
-This ensures the game can select individual pronouns even when LLM returns combined keys.
+This ensures the game displays correct pronouns for each language and can match against combined keys.
+
+### Reflexive Verb Answer Validation (CRITICAL)
+
+**Problem**: Reflexive verb conjugations include the subject pronoun in the answer value (e.g., `"ich": "ich wasche mich"`). This is correct and necessary to show which reflexive pronoun to use, but the game must handle validation properly.
+
+**Solution**: Accept both forms - with and without the subject pronoun:
+
+```javascript
+const correctAnswer = conjugations[conjugationKey]; // e.g., "ich wasche mich"
+const correctLower = correctAnswer.toLowerCase();
+
+// Extract the verb part without the subject pronoun at the start
+const subjectPattern = new RegExp(`^${currentSubject.toLowerCase()}\\s+`, 'i');
+const verbPartOnly = correctLower.replace(subjectPattern, '').trim();
+
+// Accept either:
+// 1. Full answer with subject: "ich wasche mich"
+// 2. Just the verb part: "wasche mich"
+if (userInput === correctLower || userInput === verbPartOnly) {
+  // Correct!
+}
+```
+
+**Important**: Do NOT prepend the subject pronoun to the answer again, as this creates duplicates like "ich ich wasche mich".
+
+### LLM Content Generation Prompts (CRITICAL)
+
+**Wordle Words - Enforce Exact Length**:
+```javascript
+// MUST specify "EXACTLY 5 letters" multiple times
+// For non-Latin alphabets, emphasize counting characters in native script
+const prompt = `Generate exactly 15 words in ${language}...
+CRITICAL REQUIREMENT: Every single word MUST be exactly 5 letters long when written in ${language}. Count the letters carefully.
+...
+VERIFY: Before returning, double-check that each word is exactly 5 letters long.`;
+```
+
+**Memory Game - Limit Word Length**:
+```javascript
+// Words must fit on cards - limit to 12 characters
+const prompt = `Generate exactly 12 word pairs...
+- CRITICAL: Words must be SHORT - maximum 12 characters for ${language} words, maximum 14 characters for English
+- Use SINGLE WORDS only - no phrases with spaces
+- If a concept requires multiple words, choose a simpler single-word alternative`;
+```
+
+**Reflexive Verbs - Include Full Conjugations**:
+```javascript
+// Conjugations MUST include the subject pronoun for clarity
+const prompt = `Generate exactly 15 reflexive verbs...
+IMPORTANT - Conjugation Format for Reflexive Verbs:
+- Include the FULL conjugated form with both subject pronoun and reflexive pronoun
+- This ensures clarity about which reflexive pronoun to use (mich/dich/sich in German, me/te/se in Spanish, etc.)
+- Example for German: "ich": "ich wasche mich", "du": "du wäschst dich", "er_sie_es": "er/sie/es wäscht sich"`;
+```
+
+### Games Must Not Have Difficulty Selectors
+
+**CRITICAL**: Games should NOT include difficulty selection dropdowns. Difficulty is selected once during content generation in `llm-settings.html`.
+
+**Wrong (Wordle had this bug)**:
+```html
+<section id="levelSelection">
+  <h2>Select Difficulty Level</h2>
+  <select id="levelSelect">
+    <option value="beginner">Beginner</option>
+    ...
+  </select>
+</section>
+```
+
+**Correct**:
+```html
+<section id="startScreen">
+  <h2>Wordle Game</h2>
+  <p>Guess the 5-letter word in 6 tries!</p>
+  <button onclick="startGame()">Start Game</button>
+</section>
+```
+
+Games should display the selected language and difficulty from stored content in the session info area at the top, but NOT allow changing it.
 
 ### Navigation Structure
 
@@ -316,8 +512,24 @@ Password input fields with toggle buttons require special CSS:
 **Fix**: Add to styles-v3.css (same as above)
 
 ### Verb Wheel "No Conjugation Found" Error
-**Cause**: LLM returns combined pronoun keys like "él/ella" but game looks for individual "ella"
-**Fix**: Implement flexible `findConjugationKey()` function that splits on "/" and matches parts (see Verb Conjugation Data Structure section above)
+**Cause**: LLM returns combined pronoun keys like "él/ella" or "er_sie_es" but game looks for individual pronouns
+**Fix**: Implement flexible `findConjugationKey()` function that splits on both "/" and "_" and matches parts (see Verb Conjugation Data Structure section above)
+
+### Verb Wheel Shows Wrong Language Pronouns
+**Cause**: Missing language mapping in pronoun selection - game defaults to Italian pronouns
+**Fix**: Add language-specific pronoun arrays for all 10 supported languages in both `tenses-adaptive.html` and `reflexives-adaptive.html` (see Subject Pronouns section above)
+
+### German Reflexive Verbs Show Pronoun Twice
+**Cause**: Answer validation was prepending subject pronoun to an answer that already included it
+**Fix**: Use regex to extract verb-only part and accept both full answer and verb-only answer (see Reflexive Verb Answer Validation section above)
+
+### Wordle Words Not All 5 Letters (especially in Russian/Chinese)
+**Cause**: LLM prompt not emphatic enough about exact length requirement for non-Latin alphabets
+**Fix**: Update prompt to emphasize "EXACTLY 5 letters" and add verification step (see LLM Content Generation Prompts section)
+
+### Memory Game Words Too Long, Don't Fit in Cards
+**Cause**: No length restrictions in LLM prompt allowed 14+ character words and multi-word phrases
+**Fix**: Add maximum 12 character limit and require single words only (see LLM Content Generation Prompts section)
 
 ### Wheel Result Disappears After Submitting Answer
 **Cause**: Code hides input container immediately: `conjugationInput.style.display = "none"`
@@ -350,6 +562,30 @@ Password input fields with toggle buttons require special CSS:
 ### Export/Import Buttons Different Sizes
 **Cause**: Label and button elements have different default behaviors
 **Fix**: Use fixed `height`, `width: fit-content`, and `vertical-align: middle` (see Button Sizing section)
+
+### Share Link Not Working / Content Not Loading from URL
+**Cause**: HTML files loading old `game-content-loader.js` instead of `gcl-1761141656.js`
+**Fix**: Update all HTML files to reference `<script src="js/gcl-1761141656.js" defer></script>`
+
+**Cause**: URL fragment not being parsed on page load
+**Fix**: Ensure `GameContentLoader.initFromURL()` is called in DOMContentLoaded handler before `loadCustomContent()`
+
+**Cause**: URL too long (>13k chars) causing Apache "Request-URI Too Long" error
+**Fix**: Update to use URL fragment (`#content=`) instead of query parameter (`?content=`). Fragments bypass server length limits.
+
+**Cause**: URL encoding issues with special characters (Cyrillic, CJK, Arabic)
+**Fix**: System uses `encodeURIComponent()` + Base64 which handles all Unicode correctly - if issues persist, check browser console for errors
+
+**Cause**: URL shortening service fails (503 error)
+**Fix**: System automatically falls back to long URL. PHP proxy tries multiple services (is.gd, v.gd, Clck.ru, dagd) - at least one should work.
+
+### Share Link Modal Not Appearing
+**Cause**: Modal CSS not loaded or display property not set correctly
+**Fix**: Ensure `adaptive-v3.css` is loaded and modal has `display: flex` when open
+
+### Copy Button Not Working
+**Cause**: Browser security restrictions on clipboard access
+**Fix**: System falls back to manual selection - user can click input field and use Ctrl+C/Cmd+C
 
 ## Footer Attribution (REQUIRED)
 

@@ -70,7 +70,7 @@
 
       <!-- Security Warning -->
       <div class="alert alert-warning">
-        <strong>Security Notice:</strong> API keys are stored in browser local storage only. For production environments, consider implementing a backend proxy.
+        <strong>Security Notice:</strong> Don't generate content on shared or public computers. Your API key is stored in this browser and could be accessed by others using the same device.
       </div>
 
       <!-- Provider Tabs -->
@@ -187,15 +187,12 @@
         <div class="selection-grid" style="grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));">
           <div class="selection-card difficulty-beginner" data-difficulty="beginner" onclick="selectDifficulty('beginner')">
             <h3>Beginner</h3>
-            <p>Basic vocabulary</p>
           </div>
           <div class="selection-card difficulty-intermediate" data-difficulty="intermediate" onclick="selectDifficulty('intermediate')">
             <h3>Intermediate</h3>
-            <p>Everyday use</p>
           </div>
           <div class="selection-card difficulty-advanced" data-difficulty="advanced" onclick="selectDifficulty('advanced')">
             <h3>Advanced</h3>
-            <p>Complex language</p>
           </div>
         </div>
       </div>
@@ -244,6 +241,7 @@
 
       <div class="content-actions">
         <button class="btn-export" onclick="exportContent()">📥 Export Content</button>
+        <button class="btn-share" onclick="generateShareLink()">🔗 Share Link</button>
         <label for="importFile" class="btn-import">
           📤 Import Content
         </label>
@@ -251,9 +249,76 @@
       </div>
 
       <div class="alert alert-info" style="margin-top: var(--spacing-lg);">
-        <strong>For Teachers:</strong> Generate content, export it, and share the JSON file with students. They can import it without needing their own API key!
+        <strong>For Teachers:</strong> Generate content and share it with students in two ways:
+        <ul style="margin: var(--spacing-sm) 0 0 var(--spacing-lg); padding-left: 0;">
+          <li><strong>Share Link (Recommended):</strong> Generate a shortened URL (~25 chars) that students can click to instantly load your content - easiest method!</li>
+          <li><strong>Export File:</strong> Download JSON file for students to import manually (backup method if URL shortening fails)</li>
+        </ul>
+        Students don't need their own API key to use shared content!
       </div>
     </section>
+
+    <!-- Share Link Modal -->
+    <div id="shareLinkModal" class="modal" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3>📤 Share Link</h3>
+          <button class="modal-close" onclick="closeShareModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Progress State (shown while shortening) -->
+          <div id="shareProgressState" style="display: none;">
+            <p style="text-align: center; color: var(--text-dark); font-size: 1.1rem; font-weight: 500; margin-bottom: var(--spacing-lg);">
+              Generating shareable link...
+            </p>
+            <div class="share-progress-bar">
+              <div class="share-progress-fill"></div>
+            </div>
+          </div>
+
+          <!-- Success State (shown after shortening succeeds) -->
+          <div id="shareSuccessState" style="display: none;">
+            <p style="margin-bottom: var(--spacing-lg); color: var(--text-muted); text-align: center;">
+              Share this link with your students. When they click it, the content will automatically load!
+            </p>
+            <div class="share-url-container">
+              <input type="text" id="shareURLInput" readonly onclick="this.select()">
+              <button class="btn-copy" onclick="copyShareLink()">📋 Copy</button>
+            </div>
+            <div class="share-instructions">
+              <strong>How students use this link:</strong>
+              <ol>
+                <li>Click the link or paste it into their browser</li>
+                <li>Content automatically loads and saves to their browser</li>
+                <li>Play any of the 5 games with your curated content!</li>
+              </ol>
+            </div>
+          </div>
+
+          <!-- Fallback State (shown if shortening fails) -->
+          <div id="shareFallbackState" style="display: none;">
+            <p style="margin-bottom: var(--spacing-md); color: var(--text-muted); text-align: center;">
+              Here's your shareable link <span style="color: var(--text-light); font-size: 0.9rem;">(you may want to shorten it)</span>
+            </p>
+            <div class="share-url-container">
+              <input type="text" id="shareURLInputFallback" readonly onclick="this.select()">
+              <button class="btn-copy" onclick="copyShareLinkFallback()">📋 Copy</button>
+            </div>
+            <div class="share-instructions">
+              <strong>How students use this link:</strong>
+              <ol>
+                <li>Click the link or paste it into their browser</li>
+                <li>Content automatically loads and saves to their browser</li>
+                <li>Play any of the 5 games with your curated content!</li>
+              </ol>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn-secondary" onclick="closeShareModal()">Close</button>
+        </div>
+      </div>
+    </div>
   </main>
 
   <footer>
@@ -270,7 +335,7 @@
   <!-- Load JavaScript modules -->
   <script src="js/llm-config.js" defer></script>
   <script src="js/content-generator.js" defer></script>
-  <script src="js/game-content-loader.js" defer></script>
+  <script src="js/gcl-1761141656.js" defer></script>
 
   <script defer>
     // State management
@@ -599,6 +664,107 @@
       }
 
       event.target.value = '';
+    }
+
+    async function generateShareLink() {
+      if (!verifyModules()) return;
+
+      try {
+        const content = GameContentLoader.loadContent();
+        if (!content) {
+          showAlert('error', 'No content available. Please generate content first.');
+          return;
+        }
+
+        const shareURL = GameContentLoader.generateShareURL(content);
+        if (!shareURL) {
+          showAlert('error', 'Failed to generate share link. Please try exporting as a file instead.');
+          return;
+        }
+
+        // Show modal with progress state
+        document.getElementById('shareLinkModal').style.display = 'flex';
+        document.getElementById('shareProgressState').style.display = 'block';
+        document.getElementById('shareSuccessState').style.display = 'none';
+        document.getElementById('shareFallbackState').style.display = 'none';
+
+        // Try to shorten URL in background
+        try {
+          const shortURL = await GameContentLoader.shortenURL(shareURL);
+          if (shortURL) {
+            // Success - show short URL
+            document.getElementById('shareURLInput').value = shortURL;
+            document.getElementById('shareProgressState').style.display = 'none';
+            document.getElementById('shareSuccessState').style.display = 'block';
+          } else {
+            // Fallback - show long URL
+            document.getElementById('shareURLInputFallback').value = shareURL;
+            document.getElementById('shareProgressState').style.display = 'none';
+            document.getElementById('shareFallbackState').style.display = 'block';
+          }
+        } catch (error) {
+          // Fallback on error - show long URL
+          document.getElementById('shareURLInputFallback').value = shareURL;
+          document.getElementById('shareProgressState').style.display = 'none';
+          document.getElementById('shareFallbackState').style.display = 'block';
+          console.error('URL shortening error:', error);
+        }
+
+      } catch (error) {
+        showAlert('error', `Failed to generate share link: ${error.message}`);
+      }
+    }
+
+    function closeShareModal() {
+      document.getElementById('shareLinkModal').style.display = 'none';
+      // Reset all states for next use
+      document.getElementById('shareProgressState').style.display = 'none';
+      document.getElementById('shareSuccessState').style.display = 'none';
+      document.getElementById('shareFallbackState').style.display = 'none';
+    }
+
+    function copyShareLink() {
+      const input = document.getElementById('shareURLInput');
+      input.select();
+      input.setSelectionRange(0, 99999); // For mobile devices
+
+      try {
+        document.execCommand('copy');
+        const copyBtn = event.target;
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = '✅ Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 2000);
+      } catch (error) {
+        showAlert('error', 'Failed to copy. Please select and copy manually.');
+      }
+    }
+
+    function copyShareLinkFallback() {
+      const input = document.getElementById('shareURLInputFallback');
+      input.select();
+      input.setSelectionRange(0, 99999); // For mobile devices
+
+      try {
+        document.execCommand('copy');
+        const copyBtn = event.target;
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = '✅ Copied!';
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 2000);
+      } catch (error) {
+        showAlert('error', 'Failed to copy. Please select and copy manually.');
+      }
+    }
+
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+      const modal = document.getElementById('shareLinkModal');
+      if (event.target === modal) {
+        closeShareModal();
+      }
     }
 
     // ===========================

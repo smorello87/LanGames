@@ -120,7 +120,7 @@
   </footer>
 
   <!-- Load JavaScript modules -->
-  <script src="js/game-content-loader.js"></script>
+  <script src="js/gcl-1761141656.js"></script>
 
   <script>
     let customTopics = null;
@@ -134,6 +134,8 @@
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
+      // Check for shared content in URL first
+      GameContentLoader.initFromURL();
       loadCustomContent();
       displaySessionInfo();
     });

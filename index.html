@@ -354,6 +354,9 @@
     </div>
   </footer>
 
+  <!-- Load JavaScript modules -->
+  <script src="js/gcl-1761141656.js" defer></script>
+
   <script>
     function toggleFAQ(button) {
       const faqItem = button.parentElement;
@@ -369,6 +372,24 @@
         faqItem.classList.add('active');
       }
     }
+
+    // Check for shared content in URL on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      if (typeof GameContentLoader !== 'undefined') {
+        const loaded = GameContentLoader.initFromURL();
+        if (loaded) {
+          // Show success message
+          const heroSection = document.querySelector('.hero-section');
+          if (heroSection) {
+            const alert = document.createElement('div');
+            alert.className = 'alert alert-success';
+            alert.style.marginTop = 'var(--spacing-lg)';
+            alert.innerHTML = '<strong>✅ Content Loaded!</strong> Shared content has been loaded successfully. You can now play any of the games!';
+            heroSection.appendChild(alert);
+          }
+        }
+      }
+    });
   </script>
 </body>
 </html>

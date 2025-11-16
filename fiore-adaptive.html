@@ -50,9 +50,197 @@
       color: var(--color-italian-green);
     }
 
+    /* Input container with enhanced styling */
+    .input-container {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: var(--spacing-md);
+      margin: var(--spacing-xl) 0;
+      padding: var(--spacing-lg);
+      background: linear-gradient(135deg, #F8F9FA 0%, #FFFFFF 100%);
+      border-radius: var(--border-radius-medium);
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+
+    /* Enhanced input box styling */
+    #guessInput {
+      /* Typography - Large and legible for all alphabets */
+      font-size: 2rem;
+      font-weight: var(--font-weight-bold);
+      text-align: center;
+      text-transform: uppercase;
+      font-family: var(--font-primary);
+
+      /* Sizing - Prominent and touch-friendly */
+      width: 80px;
+      height: 80px;
+      min-height: 80px;
+      padding: 0;
+
+      /* Borders and colors */
+      border: 3px solid var(--color-primary);
+      border-radius: var(--border-radius-medium);
+      background: var(--color-white);
+      color: var(--text-dark);
+
+      /* Visual effects */
+      box-shadow: 0 4px 12px rgba(0, 61, 165, 0.15),
+                  inset 0 2px 4px rgba(255, 255, 255, 0.9);
+      transition: all var(--transition-medium);
+
+      /* Remove default appearance */
+      outline: none;
+      -webkit-appearance: none;
+      -moz-appearance: none;
+      appearance: none;
+    }
+
+    /* Hover state */
+    #guessInput:hover:not(:disabled) {
+      border-color: var(--accent-teal);
+      box-shadow: 0 6px 16px rgba(8, 145, 178, 0.2),
+                  inset 0 2px 4px rgba(255, 255, 255, 0.9);
+      transform: translateY(-2px);
+    }
+
+    /* Focus state - Strong visual feedback */
+    #guessInput:focus {
+      border-color: var(--accent-teal);
+      box-shadow: 0 0 0 4px rgba(8, 145, 178, 0.2),
+                  0 8px 20px rgba(8, 145, 178, 0.3),
+                  inset 0 2px 4px rgba(255, 255, 255, 0.9);
+      transform: scale(1.05);
+      background: linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%);
+    }
+
+    /* Disabled state */
+    #guessInput:disabled {
+      background: var(--color-gray-200);
+      border-color: var(--color-gray-300);
+      color: var(--color-gray-500);
+      cursor: not-allowed;
+      box-shadow: none;
+    }
+
+    /* Placeholder styling */
+    #guessInput::placeholder {
+      color: var(--color-gray-400);
+      opacity: 0.6;
+      font-weight: var(--font-weight-normal);
+    }
+
+    /* Enhanced submit button */
+    #submitGuess {
+      font-size: 1.1rem;
+      font-weight: var(--font-weight-bold);
+      padding: var(--spacing-md) var(--spacing-xl);
+      min-height: 56px;
+      min-width: 120px;
+      background: linear-gradient(135deg, var(--accent-teal) 0%, #0E7490 100%);
+      border: none;
+      border-radius: var(--border-radius-medium);
+      color: var(--color-white);
+      cursor: pointer;
+      box-shadow: 0 4px 12px rgba(8, 145, 178, 0.25);
+      transition: all var(--transition-medium);
+      position: relative;
+      overflow: hidden;
+    }
+
+    #submitGuess::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      width: 0;
+      height: 0;
+      background: rgba(255, 255, 255, 0.3);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+      transition: width 0.6s, height 0.6s;
+    }
+
+    #submitGuess:hover:not(:disabled) {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(8, 145, 178, 0.35);
+      background: linear-gradient(135deg, #0E7490 0%, var(--accent-teal) 100%);
+    }
+
+    #submitGuess:hover:not(:disabled)::before {
+      width: 300px;
+      height: 300px;
+    }
+
+    #submitGuess:active:not(:disabled) {
+      transform: translateY(-1px);
+      box-shadow: 0 2px 8px rgba(8, 145, 178, 0.2);
+    }
+
+    #submitGuess:disabled {
+      background: var(--color-gray-300);
+      color: var(--color-gray-500);
+      cursor: not-allowed;
+      box-shadow: none;
+      transform: none;
+    }
+
+    /* Guessed letters display */
+    #guessedLetters {
+      margin-top: var(--spacing-lg);
+      font-size: 1rem;
+      color: var(--text-muted);
+      min-height: 28px;
+      font-weight: var(--font-weight-medium);
+      letter-spacing: 0.5px;
+      padding: var(--spacing-sm) var(--spacing-md);
+      background: var(--color-gray-100);
+      border-radius: var(--border-radius-small);
+      border-left: 3px solid var(--accent-teal);
+    }
+
+    /* Mobile responsive adjustments */
     @media (max-width: 600px) {
-      #letters {
-        grid-template-columns: repeat(7, 1fr);
+      .input-container {
+        gap: var(--spacing-sm);
+        padding: var(--spacing-md);
+        margin: var(--spacing-lg) 0;
+      }
+
+      #guessInput {
+        font-size: 1.8rem;
+        width: 70px;
+        height: 70px;
+        min-height: 70px;
+        border-width: 2px;
+      }
+
+      #submitGuess {
+        font-size: 1rem;
+        padding: var(--spacing-sm) var(--spacing-lg);
+        min-height: 52px;
+        min-width: 100px;
+      }
+
+      #guessedLetters {
+        font-size: 0.95rem;
+        padding: var(--spacing-sm);
+      }
+    }
+
+    /* Enhanced accessibility for keyboard navigation */
+    @media (prefers-reduced-motion: reduce) {
+      #guessInput,
+      #submitGuess {
+        transition: none;
+      }
+
+      #guessInput:focus {
+        transform: none;
+      }
+
+      #submitGuess:hover:not(:disabled) {
+        transform: none;
       }
     }
   </style>
@@ -94,7 +282,7 @@
 
     <div id="setup" class="game-section">
       <h2>Start Game</h2>
-      <p>Guess the word letter by letter. Each wrong guess adds a petal to help the flower bloom!</p>
+      <p>Type one letter at a time to guess the word. Each wrong guess adds a petal to help the flower bloom!</p>
       <button id="startBtn">Start</button>
       <br><br>
       <a href="llm-settings.html">Back to Settings</a>
@@ -103,7 +291,11 @@
     <div id="game">
       <div id="hangman">Petals: <span id="lives"></span> / 8</div>
       <div id="word"></div>
-      <div id="letters"></div>
+      <div class="input-container">
+        <input type="text" id="guessInput" maxlength="1" placeholder="?" autocomplete="off" autofocus>
+        <button id="submitGuess">Guess</button>
+      </div>
+      <div id="guessedLetters"></div>
       <div id="message"></div>
       <div id="image-container">
         <img id="hangmanImage" src="flower/flower0.jpg" alt="Flower blooming">
@@ -127,7 +319,7 @@
   </footer>
 
   <!-- Load JavaScript modules -->
-  <script src="js/game-content-loader.js"></script>
+  <script src="js/gcl-1761141656.js"></script>
 
   <script>
     // Nav hamburger toggle
@@ -147,15 +339,19 @@
     // Custom content from LLM
     let customWords = null;
     const totalLives = 8;
-    let answer = '', displayed = [], lives = totalLives, gameOver = false;
+    let answer = '', displayed = [], lives = totalLives, gameOver = false, guessedLetters = [];
     const setupEl = document.getElementById('setup');
     const gameEl = document.getElementById('game');
     const startBtn = document.getElementById('startBtn');
     const restartBtn = document.getElementById('restartBtn');
     const changeLevelBtn = document.getElementById('changeLevelBtn');
+    const guessInput = document.getElementById('guessInput');
+    const submitGuess = document.getElementById('submitGuess');
 
     // Initialize
     document.addEventListener('DOMContentLoaded', () => {
+      // Check for shared content in URL first
+      GameContentLoader.initFromURL();
       loadCustomContent();
       displaySessionInfo();
     });
@@ -163,8 +359,8 @@
     function loadCustomContent() {
       const content = GameContentLoader.loadContent();
       if (content && content.wordle && content.wordle.length > 0) {
-        // Use wordle words for Fiore game
-        customWords = content.wordle.map(w => w.toUpperCase());
+        // Use wordle words for Fiore game - keep original case
+        customWords = content.wordle;
         console.log('Custom content loaded:', customWords.length, 'words');
       } else {
         // No fallback - redirect to settings
@@ -203,48 +399,65 @@
         return;
       }
 
-      answer = customWords[Math.floor(Math.random() * customWords.length)].toUpperCase();
+      // Get random word - keep original case for display
+      answer = customWords[Math.floor(Math.random() * customWords.length)];
 
       displayed = Array(answer.length).fill('_');
       lives = totalLives;
       gameOver = false;
+      guessedLetters = [];
 
       const mistakes = totalLives - lives;
       document.getElementById('lives').textContent = mistakes;
       document.getElementById('message').textContent = '';
+      document.getElementById('guessedLetters').textContent = '';
       document.getElementById('hangmanImage').src = 'flower/flower0.jpg';
+
+      guessInput.value = '';
+      guessInput.disabled = false;
+      submitGuess.disabled = false;
 
       setupEl.style.display = 'none';
       gameEl.style.display = 'flex';
 
       renderWord();
-      createLetterButtons();
+      guessInput.focus();
     }
 
     function renderWord() {
       document.getElementById('word').textContent = displayed.join(' ');
     }
 
-    function createLetterButtons() {
-      const container = document.getElementById('letters');
-      container.innerHTML = '';
-      for (let i = 65; i <= 90; i++) {
-        const btn = document.createElement('button');
-        btn.textContent = String.fromCharCode(i);
-        btn.addEventListener('click', () => handleGuess(btn));
-        container.appendChild(btn);
-      }
-    }
-
-    function handleGuess(btn) {
+    function handleGuess() {
       if (gameOver) return;
-      const letter = btn.textContent;
-      btn.disabled = true;
+
+      const letter = guessInput.value.trim();
+
+      // Validate input
+      if (!letter || letter.length === 0) {
+        return;
+      }
+
+      // Normalize for comparison (case-insensitive where applicable)
+      const normalizedLetter = letter.toLowerCase();
+      const normalizedGuessed = guessedLetters.map(l => l.toLowerCase());
+
+      // Check if already guessed (case-insensitive)
+      if (normalizedGuessed.includes(normalizedLetter)) {
+        guessInput.value = '';
+        guessInput.focus();
+        return;
+      }
+
+      guessedLetters.push(letter);
+      updateGuessedLetters();
+
       let found = false;
 
+      // Match case-insensitively for all languages
       for (let i = 0; i < answer.length; i++) {
-        if (answer[i] === letter) {
-          displayed[i] = letter;
+        if (answer[i].toLowerCase() === normalizedLetter) {
+          displayed[i] = answer[i]; // Use the original case from answer
           found = true;
         }
       }
@@ -256,9 +469,29 @@
         updateImage();
       }
 
+      guessInput.value = '';
+      guessInput.focus();
       renderWord();
       checkEnd();
     }
+
+    function updateGuessedLetters() {
+      const guessedDiv = document.getElementById('guessedLetters');
+      if (guessedLetters.length > 0) {
+        guessedDiv.textContent = 'Guessed: ' + guessedLetters.join(', ');
+      } else {
+        guessedDiv.textContent = '';
+      }
+    }
+
+    // Event listeners for input
+    submitGuess.addEventListener('click', handleGuess);
+
+    guessInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') {
+        handleGuess();
+      }
+    });
 
     function checkEnd() {
       const msg = document.getElementById('message');
@@ -266,9 +499,13 @@
       if (!displayed.includes('_')) {
         msg.textContent = `Congratulations! You won with ${mistakes} petal${mistakes !== 1 ? 's' : ''}!`;
         gameOver = true;
+        guessInput.disabled = true;
+        submitGuess.disabled = true;
       } else if (lives === 0) {
         msg.textContent = `Game Over! The flower has fully bloomed. The word was: ${answer}`;
         gameOver = true;
+        guessInput.disabled = true;
+        submitGuess.disabled = true;
       }
     }
 
