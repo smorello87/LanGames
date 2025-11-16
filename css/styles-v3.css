@@ -199,6 +199,12 @@ header h1 {
   margin: 0;
 }
 
+header img {
+  max-width: 400px;
+  height: auto;
+  display: block;
+}
+
 /* ===========================
    Navigation
    =========================== */
@@ -736,6 +742,10 @@ canvas,
 
   header h1 {
     font-size: 1.5rem;
+  }
+
+  header img {
+    max-width: 280px;
   }
 
   .container {
