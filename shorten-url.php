@@ -43,13 +43,27 @@ if (!filter_var($longURL, FILTER_VALIDATE_URL)) {
  * Using modern, actively maintained APIs (NO DEPRECATED APIS)
  *
  * Services selected for 2025:
- * - spoo.me: Modern API, no key required, stable
- * - ulvis.net: Free API, 100 req/hour per IP, JSON response
+ * - TinyURL: Most reliable, no rate limits for reasonable use
+ * - is.gd: Fast, reliable
+ * - v.gd: Sister service to is.gd
  * - Clck.ru: Russian service, simple GET API
+ * - dagd: Final fallback
  */
 $services = [
     [
-        'name' => 'is.gd (simple)',
+        'name' => 'TinyURL',
+        'url' => 'https://tinyurl.com/api-create.php?url=' . urlencode($longURL),
+        'method' => 'GET',
+        'parse' => function($response) {
+            $shortURL = trim($response);
+            if (filter_var($shortURL, FILTER_VALIDATE_URL) && strpos($shortURL, 'tinyurl.com') !== false) {
+                return $shortURL;
+            }
+            return null;
+        }
+    ],
+    [
+        'name' => 'is.gd',
         'url' => 'https://is.gd/create.php?format=simple&url=' . urlencode($longURL),
         'method' => 'GET',
         'parse' => function($response) {
@@ -61,7 +75,7 @@ $services = [
         }
     ],
     [
-        'name' => 'v.gd (simple)',
+        'name' => 'v.gd',
         'url' => 'https://v.gd/create.php?format=simple&url=' . urlencode($longURL),
         'method' => 'GET',
         'parse' => function($response) {

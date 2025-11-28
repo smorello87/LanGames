@@ -266,12 +266,25 @@ const GameContentLoader = {
     return out.join('');
   },
 
-  // Encode content to Base64 for URL sharing (NO COMPRESSION - just base64)
+  // Encode content for URL sharing (uses lz-string compression if available)
   encodeContentForURL(content) {
     try {
       const jsonStr = JSON.stringify(content);
 
-      // Just encode to URL-safe base64, no compression
+      // Try lz-string compression if available (50-70% smaller)
+      if (typeof LZString !== 'undefined') {
+        const compressed = LZString.compressToEncodedURIComponent(jsonStr);
+        console.log('Compression stats:', {
+          original: jsonStr.length,
+          compressed: compressed.length,
+          ratio: ((compressed.length / jsonStr.length) * 100).toFixed(1) + '%',
+          method: 'lz-string'
+        });
+        // Prefix with 'z_' to identify compressed format
+        return 'z_' + compressed;
+      }
+
+      // Fallback to URL-safe base64 (no compression)
       const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
@@ -280,7 +293,8 @@ const GameContentLoader = {
       console.log('Encoding stats:', {
         original: jsonStr.length,
         base64: base64.length,
-        ratio: ((base64.length / jsonStr.length) * 100).toFixed(1) + '%'
+        ratio: ((base64.length / jsonStr.length) * 100).toFixed(1) + '%',
+        method: 'base64'
       });
 
       return base64;
@@ -290,11 +304,25 @@ const GameContentLoader = {
     }
   },
 
-  // Decode content from Base64 URL parameter (NO COMPRESSION)
-  decodeContentFromURL(base64Str) {
+  // Decode content from URL parameter (handles both lz-string and legacy base64)
+  decodeContentFromURL(encodedStr) {
     try {
-      // Restore standard base64
-      let base64 = base64Str.replace(/-/g, '+').replace(/_/g, '/');
+      // Check for lz-string compressed format (prefixed with 'z_')
+      if (encodedStr.startsWith('z_')) {
+        if (typeof LZString === 'undefined') {
+          console.error('lz-string library not loaded, cannot decompress');
+          return null;
+        }
+        const jsonStr = LZString.decompressFromEncodedURIComponent(encodedStr.slice(2));
+        if (jsonStr) {
+          return JSON.parse(jsonStr);
+        }
+        console.error('lz-string decompression returned null');
+        return null;
+      }
+
+      // Legacy: URL-safe base64 decoding
+      let base64 = encodedStr.replace(/-/g, '+').replace(/_/g, '/');
       while (base64.length % 4) {
         base64 += '=';
       }
@@ -380,6 +408,73 @@ const GameContentLoader = {
     }
   },
 
+  // Helper to get correct server URL based on environment
+  _getServerURL(filename) {
+    // Auto-detect base URL from current page location
+    const basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
+    return basePath + filename;
+  },
+
+  // Store content on server (primary sharing method - returns short ID)
+  async storeContentOnServer(content) {
+    try {
+      const storeURL = this._getServerURL('store-content.php');
+      console.log('Storing content on server...');
+
+      const response = await fetch(storeURL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(content)
+      });
+
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        throw new Error(error.error || `HTTP ${response.status}`);
+      }
+
+      const data = await response.json();
+      if (data.success && data.url) {
+        console.log('Content stored successfully:', {
+          id: data.id,
+          expires: data.expires,
+          url: data.url
+        });
+        return {
+          url: data.url,
+          id: data.id,
+          expires: data.expires,
+          expiresDate: data.expiresDate
+        };
+      }
+      throw new Error(data.error || 'Unknown error');
+    } catch (error) {
+      console.warn('Server storage failed:', error.message);
+      return null;
+    }
+  },
+
+  // Load content from server by ID
+  async loadContentFromServer(id) {
+    try {
+      const getURL = this._getServerURL('get-content.php') + '?id=' + encodeURIComponent(id);
+      console.log('Loading content from server, ID:', id);
+
+      const response = await fetch(getURL);
+      if (!response.ok) {
+        const error = await response.json().catch(() => ({}));
+        console.error('Server load failed:', error.error || `HTTP ${response.status}`);
+        return null;
+      }
+
+      const content = await response.json();
+      console.log('Content loaded from server:', content.language, content.difficulty);
+      return content;
+    } catch (error) {
+      console.error('Server load failed:', error);
+      return null;
+    }
+  },
+
   // Check for and load content from URL parameter or fragment
   loadContentFromURL() {
     try {
@@ -429,13 +524,69 @@ const GameContentLoader = {
   },
 
   // Initialize: Check URL for shared content on page load
+  // Returns: true if content was loaded, false otherwise
+  // Note: This is synchronous for URL-encoded content, but async for server-stored content
   initFromURL() {
+    // First check for server-stored content (?id=xxx) - this is async
+    const urlParams = new URLSearchParams(window.location.search);
+    const contentId = urlParams.get('id');
+
+    if (contentId) {
+      // Load from server asynchronously
+      this.loadContentFromServer(contentId).then(content => {
+        if (content) {
+          this.saveContent(content);
+          this.saveSession(content.language, content.difficulty);
+          // Clean URL
+          const url = new URL(window.location);
+          url.searchParams.delete('id');
+          window.history.replaceState({}, '', url);
+          // Dispatch event so pages can react to loaded content
+          window.dispatchEvent(new CustomEvent('contentLoaded', { detail: content }));
+        }
+      });
+      return true; // Return true to indicate we're handling a share URL
+    }
+
+    // Fall back to URL-encoded content (#content=xxx or ?content=xxx)
     const urlContent = this.loadContentFromURL();
     if (urlContent) {
       // Clean URL by removing the content parameter and fragment
       const url = new URL(window.location);
       url.searchParams.delete('content');
       url.hash = ''; // Remove fragment
+      window.history.replaceState({}, '', url);
+      return true;
+    }
+    return false;
+  },
+
+  // Async version of initFromURL for pages that need to wait for content
+  async initFromURLAsync() {
+    // First check for server-stored content (?id=xxx)
+    const urlParams = new URLSearchParams(window.location.search);
+    const contentId = urlParams.get('id');
+
+    if (contentId) {
+      const content = await this.loadContentFromServer(contentId);
+      if (content) {
+        this.saveContent(content);
+        this.saveSession(content.language, content.difficulty);
+        // Clean URL
+        const url = new URL(window.location);
+        url.searchParams.delete('id');
+        window.history.replaceState({}, '', url);
+        return true;
+      }
+      return false;
+    }
+
+    // Fall back to URL-encoded content (#content=xxx or ?content=xxx)
+    const urlContent = this.loadContentFromURL();
+    if (urlContent) {
+      const url = new URL(window.location);
+      url.searchParams.delete('content');
+      url.hash = '';
       window.history.replaceState({}, '', url);
       return true;
     }

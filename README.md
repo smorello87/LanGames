@@ -17,6 +17,7 @@ LanGames is a static web application that generates custom educational content f
   - ⚙️ **Verb Tenses Wheel** - Present tense conjugation practice
   - ⚙️ **Reflexive Verbs Wheel** - Reflexive verb conjugation practice
 - **Multiple LLM Providers**: OpenAI, OpenRouter, Open Web UI (self-hosted)
+- **URL Sharing**: Share content via short links - students don't need API keys!
 - **Export/Import**: Share generated content via JSON files
 - **Offline Play**: Students use imported content without API access
 - **No Build Process**: Pure HTML/CSS/JavaScript - works anywhere
@@ -37,19 +38,31 @@ LanGames is a static web application that generates custom educational content f
    - Click "Generate All Content"
    - Wait 5-10 minutes for generation
 
-3. **Export for Students**
+3. **Share with Students** (Two Options)
+
+   **Option A: Share Link (Easiest)**
+   - Click "🔗 Share Link" button
+   - Copy the short URL (e.g., `yoursite.com/langames/?id=abc123`)
+   - Send link to students - they click and play!
+
+   **Option B: Export File**
    - Click "Export Content" button
    - Save JSON file (e.g., `language-games-spanish-beginner.json`)
-   - Share with students
+   - Share file with students
 
 ### For Students
 
-1. **Import Content**
+1. **Using a Share Link**
+   - Click the link from your instructor
+   - Content loads automatically
+   - Start playing!
+
+2. **Using an Exported File**
    - Open `llm-settings.html`
    - Click "Import Content"
    - Select JSON file from instructor
 
-2. **Play Games**
+3. **Play Games**
    - Navigate using the top menu
    - Choose any of the 5 games
    - Practice with custom-generated content!
@@ -58,15 +71,15 @@ LanGames is a static web application that generates custom educational content f
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR-USERNAME/LanGames.git
+git clone https://github.com/smorello87/LanGames.git
 cd LanGames
 
-# Option 1: Open directly in browser
-open index.html
-
-# Option 2: Use a local server (recommended)
-python3 -m http.server 8000
+# Use PHP server (recommended - enables URL sharing)
+php -S localhost:8000
 # Navigate to http://localhost:8000
+
+# Alternative: Python server (URL sharing won't work)
+python3 -m http.server 8000
 ```
 
 ## 📋 Content Generated
@@ -108,6 +121,10 @@ LanGames/
 ├── fiore-adaptive.html           # Flower word guessing game
 ├── tenses-adaptive.html          # Verb conjugation wheel (present)
 ├── reflexives-adaptive.html      # Reflexive verb wheel
+├── store-content.php             # Server-side content storage API
+├── get-content.php               # Content retrieval API
+├── shorten-url.php               # URL shortening proxy
+├── content/                      # Stored content (JSON files)
 ├── css/
 │   ├── styles-v3.css            # Base styles, navigation, variables
 │   ├── games-v3.css             # Game-specific styles
@@ -115,7 +132,7 @@ LanGames/
 ├── js/
 │   ├── llm-config.js            # API settings management
 │   ├── content-generator.js     # LLM API integration
-│   └── game-content-loader.js   # Content import/export
+│   └── gcl-1761141656.js        # Game content loader
 ├── flower/                       # Flower game images (0-8.jpg)
 ├── docs/
 │   └── README.md                # Detailed documentation
@@ -137,9 +154,10 @@ Fully responsive with breakpoints at 768px (tablet) and 600px (mobile). All inte
 
 - API keys stored in browser localStorage only
 - Keys never transmitted except to configured LLM endpoint
-- Students don't need API keys (use imported content)
-- No server-side storage or tracking
-- All processing client-side
+- **API keys are NEVER included in share URLs** - only generated content
+- Students don't need API keys (use shared links or imported content)
+- Shared content stored on server expires after 365 days
+- All game processing is client-side
 
 ## 🌐 Browser Compatibility
 

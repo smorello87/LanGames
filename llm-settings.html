@@ -286,6 +286,7 @@
               <input type="text" id="shareURLInput" readonly onclick="this.select()">
               <button class="btn-copy" onclick="copyShareLink()">📋 Copy</button>
             </div>
+            <p id="shareExpiresInfo" style="text-align: center; color: var(--text-light); font-size: 0.85rem; margin-top: var(--spacing-sm);"></p>
             <div class="share-instructions">
               <strong>How students use this link:</strong>
               <ol>
@@ -334,6 +335,7 @@
   </footer>
 
   <!-- Load JavaScript modules -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" integrity="sha512-Q4c02RVMHmH2cCbz+X8ZNycTaxSQy6cvwN0W5X5cdHFuSmPnPnXL3wBBX3lbXcuP0p+W9pX4BOjHDEStPSE9HA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/llm-config.js" defer></script>
   <script src="js/content-generator.js" defer></script>
   <script src="js/gcl-1761141656.js" defer></script>
@@ -677,34 +679,59 @@
           return;
         }
 
-        const shareURL = GameContentLoader.generateShareURL(content);
-        if (!shareURL) {
-          showAlert('error', 'Failed to generate share link. Please try exporting as a file instead.');
-          return;
-        }
-
         // Show modal with progress state
         document.getElementById('shareLinkModal').style.display = 'flex';
         document.getElementById('shareProgressState').style.display = 'block';
         document.getElementById('shareSuccessState').style.display = 'none';
         document.getElementById('shareFallbackState').style.display = 'none';
+        document.getElementById('shareExpiresInfo').textContent = '';
 
-        // Try to shorten URL in background
+        // Update progress message
+        const progressMsg = document.querySelector('#shareProgressState p');
+        progressMsg.textContent = 'Saving content to server...';
+
+        // Step 1: Try server storage first (most reliable, shortest URLs)
+        const serverResult = await GameContentLoader.storeContentOnServer(content);
+
+        if (serverResult && serverResult.url) {
+          // Success with server storage
+          document.getElementById('shareURLInput').value = serverResult.url;
+          document.getElementById('shareExpiresInfo').textContent =
+            serverResult.expiresDate ? `Link expires: ${serverResult.expiresDate}` : `Link expires in ${serverResult.expires}`;
+          document.getElementById('shareProgressState').style.display = 'none';
+          document.getElementById('shareSuccessState').style.display = 'block';
+          return;
+        }
+
+        // Step 2: Fall back to URL encoding + shortening
+        progressMsg.textContent = 'Server unavailable. Creating compressed link...';
+
+        const shareURL = GameContentLoader.generateShareURL(content);
+        if (!shareURL) {
+          showAlert('error', 'Failed to generate share link. Please try exporting as a file instead.');
+          closeShareModal();
+          return;
+        }
+
+        // Step 3: Try to shorten the compressed URL
+        progressMsg.textContent = 'Shortening URL...';
+
         try {
           const shortURL = await GameContentLoader.shortenURL(shareURL);
           if (shortURL) {
-            // Success - show short URL
+            // Success with shortened URL
             document.getElementById('shareURLInput').value = shortURL;
+            document.getElementById('shareExpiresInfo').textContent = 'Link does not expire';
             document.getElementById('shareProgressState').style.display = 'none';
             document.getElementById('shareSuccessState').style.display = 'block';
           } else {
-            // Fallback - show long URL
+            // Final fallback - show compressed (but still long) URL
             document.getElementById('shareURLInputFallback').value = shareURL;
             document.getElementById('shareProgressState').style.display = 'none';
             document.getElementById('shareFallbackState').style.display = 'block';
           }
         } catch (error) {
-          // Fallback on error - show long URL
+          // Final fallback on error - show compressed URL
           document.getElementById('shareURLInputFallback').value = shareURL;
           document.getElementById('shareProgressState').style.display = 'none';
           document.getElementById('shareFallbackState').style.display = 'block';
@@ -713,6 +740,7 @@
 
       } catch (error) {
         showAlert('error', `Failed to generate share link: ${error.message}`);
+        closeShareModal();
       }
     }
 
