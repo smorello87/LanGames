@@ -1,0 +1,19 @@
+{
+  "name": "langames",
+  "version": "1.0.0",
+  "description": "AI-powered multilingual language learning platform",
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "check": "tsc --noEmit",
+    "deploy": "wrangler deploy"
+  },
+  "dependencies": {
+    "hono": "^4.7.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^4.20250327.0",
+    "typescript": "^5.8.0",
+    "wrangler": "^4.14.0"
+  }
+}

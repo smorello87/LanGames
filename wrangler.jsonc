@@ -1,0 +1,14 @@
+{
+  "name": "langames",
+  "main": "src/index.ts",
+  "compatibility_date": "2025-03-30",
+  "assets": {
+    "directory": "./public"
+  },
+  "kv_namespaces": [
+    {
+      "binding": "CACHE",
+      "id": "placeholder-kv-id"
+    }
+  ]
+}

@@ -181,3 +181,8 @@ cython_debug/
 .cursorindexingignore
 # Test files (development only, do not deploy)
 tests/
+
+# Node / Wrangler
+node_modules/
+.wrangler/
+.DS_Store

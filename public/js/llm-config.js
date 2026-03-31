@@ -9,7 +9,7 @@ const LLMConfig = {
   defaults: {
     openrouter: {
       endpoint: 'https://openrouter.ai/api/v1/chat/completions',
-      models: ['openai/gpt-4', 'anthropic/claude-3.5-sonnet', 'google/gemini-pro', 'meta-llama/llama-3-70b-instruct']
+      models: ['google/gemini-3.1-flash-lite-preview', 'openai/gpt-4', 'anthropic/claude-3.5-sonnet', 'google/gemini-pro', 'meta-llama/llama-3-70b-instruct']
     },
     openwebui: {
       endpoint: 'http://localhost:8080/api/chat/completions',

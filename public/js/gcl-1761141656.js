@@ -361,20 +361,12 @@ const GameContentLoader = {
     }
   },
 
-  // Shorten URL using PHP proxy (bypasses CORS)
+  // Shorten URL using server API
   async shortenURL(longURL) {
     try {
-      console.log('Shortening URL via PHP proxy...');
+      console.log('Shortening URL via server API...');
 
-      // Determine the correct proxy URL based on environment
-      let proxyURL;
-      if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-        // Local development - use local proxy
-        proxyURL = '/shorten-url.php';
-      } else {
-        // Production - use full URL to your server
-        proxyURL = 'https://stefanomorello.com/langames/shorten-url.php';
-      }
+      const proxyURL = '/api/shorten-url';
 
       const response = await fetch(proxyURL, {
         method: 'POST',
@@ -408,17 +400,10 @@ const GameContentLoader = {
     }
   },
 
-  // Helper to get correct server URL based on environment
-  _getServerURL(filename) {
-    // Auto-detect base URL from current page location
-    const basePath = window.location.pathname.replace(/\/[^/]*$/, '/');
-    return basePath + filename;
-  },
-
   // Store content on server (primary sharing method - returns short ID)
   async storeContentOnServer(content) {
     try {
-      const storeURL = this._getServerURL('store-content.php');
+      const storeURL = '/api/store-content';
       console.log('Storing content on server...');
 
       const response = await fetch(storeURL, {
@@ -456,7 +441,7 @@ const GameContentLoader = {
   // Load content from server by ID
   async loadContentFromServer(id) {
     try {
-      const getURL = this._getServerURL('get-content.php') + '?id=' + encodeURIComponent(id);
+      const getURL = '/api/get-content?id=' + encodeURIComponent(id);
       console.log('Loading content from server, ID:', id);
 
       const response = await fetch(getURL);
