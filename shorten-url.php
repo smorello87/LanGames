@@ -5,8 +5,14 @@
  */
 
 // Enable CORS for your domain
-header('Access-Control-Allow-Origin: *');
-header('Access-Control-Allow-Methods: POST, GET, OPTIONS');
+$allowedOrigins = ['https://stefanomorello.com', 'http://localhost:8765', 'http://127.0.0.1:8765'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: https://stefanomorello.com');
+}
+header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 header('Content-Type: application/json');
 
@@ -16,14 +22,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit();
 }
 
-// Get the long URL from POST or GET
-$longURL = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $input = json_decode(file_get_contents('php://input'), true);
-    $longURL = $input['url'] ?? null;
-} else {
-    $longURL = $_GET['url'] ?? null;
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    http_response_code(405);
+    echo json_encode(['error' => 'Method not allowed. Use POST.']);
+    exit();
 }
+
+$input = json_decode(file_get_contents('php://input'), true);
+$longURL = $input['url'] ?? null;
 
 if (!$longURL) {
     http_response_code(400);
@@ -36,6 +42,28 @@ if (!filter_var($longURL, FILTER_VALIDATE_URL)) {
     http_response_code(400);
     echo json_encode(['error' => 'Invalid URL format']);
     exit();
+}
+
+// Restrict to http/https schemes only
+$parsedURL = parse_url($longURL);
+if (!in_array($parsedURL['scheme'] ?? '', ['http', 'https'], true)) {
+    http_response_code(400);
+    echo json_encode(['error' => 'Only http and https URLs are allowed']);
+    exit();
+}
+
+// Block requests to private/internal networks
+$host = $parsedURL['host'] ?? '';
+$ip = gethostbyname($host);
+if ($ip !== $host) {
+    $privateRanges = ['10.', '172.16.', '172.17.', '172.18.', '172.19.', '172.20.', '172.21.', '172.22.', '172.23.', '172.24.', '172.25.', '172.26.', '172.27.', '172.28.', '172.29.', '172.30.', '172.31.', '192.168.', '127.', '169.254.', '0.'];
+    foreach ($privateRanges as $range) {
+        if (strpos($ip, $range) === 0) {
+            http_response_code(400);
+            echo json_encode(['error' => 'URLs pointing to private networks are not allowed']);
+            exit();
+        }
+    }
 }
 
 /**
@@ -122,7 +150,7 @@ foreach ($services as $service) {
         $ch = curl_init();
         curl_setopt($ch, CURLOPT_URL, $service['url']);
         curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
-        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, true);
+        curl_setopt($ch, CURLOPT_FOLLOWLOCATION, false);
         curl_setopt($ch, CURLOPT_TIMEOUT, 10);
         curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
         curl_setopt($ch, CURLOPT_USERAGENT, 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');

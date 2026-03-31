@@ -43,18 +43,19 @@
   </script>
 </head>
 <body>
+  <a class="sr-only skip-link" href="#main-content">Skip to main content</a>
   <header>
     <div class="header-content">
       <img src="imgs/header.png" alt="LanGames - Memory Game">
     </div>
   </header>
-  <nav>
-    <div class="hamburger" onclick="toggleMenu()">☰</div>
-    <div class="menu-items">
+  <nav aria-label="Main navigation">
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="main-menu"><span aria-hidden="true">☰</span></button>
+    <div class="menu-items" id="main-menu">
       <a href="index.html">Home</a>
       <a href="llm-settings.html">Settings</a>
       <div class="dropdown" onclick="toggleDropdown(event)">
-        <a href="#">Games</a>
+        <a href="#" role="button" aria-haspopup="true" aria-expanded="false" onclick="event.preventDefault()">Games</a>
         <div class="dropdown-content">
           <a href="wordle-adaptive.html">Wordle</a>
           <a href="memory-adaptive.html" class="active">Memory Game</a>
@@ -68,25 +69,28 @@
   <script>
     function toggleMenu() {
       const menu = document.querySelector('nav .menu-items');
-      menu.classList.toggle('show-menu');
+      const hamburger = document.querySelector('nav .hamburger');
+      const isOpen = menu.classList.toggle('show-menu');
+      hamburger.setAttribute('aria-expanded', isOpen);
+      hamburger.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
     }
 
     function toggleDropdown(event) {
-      // Only toggle on mobile (when hamburger is visible)
-      if (window.innerWidth <= 600) {
-        event.stopPropagation();
-        const dropdown = event.currentTarget;
-        dropdown.classList.toggle('active');
-      }
+      event.stopPropagation();
+      const dropdown = event.currentTarget;
+      const isOpen = dropdown.classList.toggle('active');
+      const trigger = dropdown.querySelector('a');
+      if (trigger) trigger.setAttribute('aria-expanded', isOpen);
     }
   </script>
 
-  <main class="container">
+  <main id="main-content" class="container">
     <div id="sessionInfo" class="session-info"></div>
 
     <!-- Topic Selection Section -->
     <section id="topicSelection" class="game-section">
       <h2>Select a Topic</h2>
+      <label for="topicSelect" class="sr-only">Select a Topic</label>
       <select id="topicSelect">
         <option value="food">Food</option>
         <option value="daily">Daily Activities</option>
@@ -105,7 +109,7 @@
       <h2 id="gameTitle"></h2>
       <div id="board" class="memory-board"></div>
       <button onclick="goBack()">Change Topic</button>
-      <div id="gameFeedback"></div>
+      <div id="gameFeedback" aria-live="polite" aria-atomic="true"></div>
     </section>
   </main>
 
@@ -135,9 +139,8 @@
     let selectedTopic = "";
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      // Check for shared content in URL first
-      GameContentLoader.initFromURL();
+    document.addEventListener('DOMContentLoaded', async () => {
+      await GameContentLoader.initFromURLAsync();
       loadCustomContent();
       displaySessionInfo();
     });
@@ -151,7 +154,7 @@
         customTopics = {};
         for (const topic in content.memory) {
           customTopics[topic] = content.memory[topic].map(item => ({
-            italian: item.word,
+            target: item.word,
             english: item.english
           }));
         }
@@ -169,12 +172,18 @@
       const infoDiv = document.getElementById('sessionInfo');
 
       if (contentInfo) {
-        infoDiv.innerHTML = `
-          <span>Language: ${contentInfo.language}</span>
-          <span>Difficulty: ${contentInfo.difficulty}</span>
-        `;
+        infoDiv.textContent = '';
+        const langSpan = document.createElement('span');
+        langSpan.textContent = 'Language: ' + contentInfo.language;
+        const diffSpan = document.createElement('span');
+        diffSpan.textContent = 'Difficulty: ' + contentInfo.difficulty;
+        infoDiv.appendChild(langSpan);
+        infoDiv.appendChild(diffSpan);
       } else {
-        infoDiv.innerHTML = '<span>Using default Italian content</span>';
+        infoDiv.textContent = '';
+        const defaultSpan = document.createElement('span');
+        defaultSpan.textContent = 'Using default Italian content';
+        infoDiv.appendChild(defaultSpan);
       }
     }
 
@@ -203,7 +212,7 @@
       totalMatches = pairs.length;
       pairs.forEach((pair, index) => {
         const id = index;
-        cards.push({ id: id, text: pair.italian, flipped: false, matched: false });
+        cards.push({ id: id, text: pair.target, flipped: false, matched: false });
         cards.push({ id: id, text: pair.english, flipped: false, matched: false });
       });
       cards = shuffle(cards);
@@ -212,8 +221,17 @@
         const cardDiv = document.createElement("div");
         cardDiv.classList.add("card");
         cardDiv.setAttribute("data-index", index);
+        cardDiv.setAttribute("role", "button");
+        cardDiv.setAttribute("tabindex", "0");
+        cardDiv.setAttribute("aria-label", "Card " + (index + 1) + ", face down");
         cardDiv.innerText = index + 1;
         cardDiv.addEventListener("click", onCardClick);
+        cardDiv.addEventListener("keydown", (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            onCardClick(e);
+          }
+        });
         boardDiv.appendChild(cardDiv);
       });
     }
@@ -240,6 +258,7 @@
       card.flipped = true;
       cardDiv.innerText = card.text;
       cardDiv.classList.add("flipped");
+      cardDiv.setAttribute("aria-label", "Card showing: " + card.text);
     }
 
     function unflipCard(cardDiv, card) {
@@ -247,6 +266,7 @@
       const idx = parseInt(cardDiv.getAttribute("data-index"), 10);
       cardDiv.innerText = idx + 1;
       cardDiv.classList.remove("flipped");
+      cardDiv.setAttribute("aria-label", "Card " + (idx + 1) + ", face down");
     }
 
     function checkForMatch() {

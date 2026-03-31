@@ -77,7 +77,14 @@ No explanations, just the JSON array.`;
     console.log('[ContentGenerator] Wordle response preview:', response.substring(0, 200));
 
     try {
-      return JSON.parse(response);
+      const words = JSON.parse(response);
+      if (!Array.isArray(words) || words.length === 0) {
+        throw new Error('Expected an array of words from the API');
+      }
+      if (words.some(w => typeof w !== 'string')) {
+        throw new Error('Wordle response contains non-string entries');
+      }
+      return words;
     } catch (error) {
       console.error('[ContentGenerator] Failed to parse Wordle JSON:', error);
       console.error('[ContentGenerator] Full response:', response);
@@ -135,13 +142,21 @@ Return exactly 12 pairs. No explanations, just the JSON array.`;
 
       try {
         const parsed = JSON.parse(response);
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          throw new Error('Expected an array of word pairs');
+        }
 
         // Normalize the key name to match expected format (e.g., "italian" for Italian)
         const langKey = Object.keys(parsed[0]).find(k => k !== 'english');
-        memoryContent[topic] = parsed.map(item => ({
-          word: item[langKey],
-          english: item.english
-        }));
+        if (!langKey) {
+          throw new Error('Word pairs missing language key');
+        }
+        memoryContent[topic] = parsed.map(item => {
+          if (!item[langKey] || !item.english) {
+            throw new Error('Word pair missing required fields');
+          }
+          return { word: item[langKey], english: item.english };
+        });
       } catch (error) {
         console.error(`[ContentGenerator] Failed to parse Memory ${topic} JSON:`, error);
         console.error('[ContentGenerator] Full response:', response);
@@ -187,7 +202,16 @@ Return exactly 20 verbs. Adapt the pronoun keys to ${language} if different from
     console.log('[ContentGenerator] Verb tenses response preview:', response.substring(0, 200));
 
     try {
-      return JSON.parse(response);
+      const verbs = JSON.parse(response);
+      if (!Array.isArray(verbs) || verbs.length === 0) {
+        throw new Error('Expected an array of verb objects');
+      }
+      for (const verb of verbs) {
+        if (!verb.infinitive || !verb.english || !verb.conjugations) {
+          throw new Error('Verb entry missing required fields (infinitive, english, conjugations)');
+        }
+      }
+      return verbs;
     } catch (error) {
       console.error('[ContentGenerator] Failed to parse verb tenses JSON:', error);
       console.error('[ContentGenerator] Full response:', response);
@@ -238,7 +262,16 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
     console.log('[ContentGenerator] Reflexive verbs response preview:', response.substring(0, 200));
 
     try {
-      return JSON.parse(response);
+      const verbs = JSON.parse(response);
+      if (!Array.isArray(verbs) || verbs.length === 0) {
+        throw new Error('Expected an array of reflexive verb objects');
+      }
+      for (const verb of verbs) {
+        if (!verb.infinitive || !verb.english || !verb.conjugations) {
+          throw new Error('Reflexive verb entry missing required fields (infinitive, english, conjugations)');
+        }
+      }
+      return verbs;
     } catch (error) {
       console.error('[ContentGenerator] Failed to parse reflexive verbs JSON:', error);
       console.error('[ContentGenerator] Full response:', response);

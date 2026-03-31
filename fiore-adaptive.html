@@ -90,8 +90,8 @@
                   inset 0 2px 4px rgba(255, 255, 255, 0.9);
       transition: all var(--transition-medium);
 
-      /* Remove default appearance */
-      outline: none;
+      /* Remove default appearance - transparent outline for High Contrast Mode */
+      outline: 3px solid transparent;
       -webkit-appearance: none;
       -moz-appearance: none;
       appearance: none;
@@ -255,18 +255,19 @@
   </script>
 </head>
 <body>
+  <a class="sr-only skip-link" href="#main-content">Skip to main content</a>
   <header>
     <div class="header-content">
       <img src="imgs/header.png" alt="LanGames - Flower">
     </div>
   </header>
-  <nav>
-    <div class="hamburger" onclick="toggleMenu()">☰</div>
-    <div class="menu-items">
+  <nav aria-label="Main navigation">
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="main-menu"><span aria-hidden="true">☰</span></button>
+    <div class="menu-items" id="main-menu">
       <a href="index.html">Home</a>
       <a href="llm-settings.html">Settings</a>
       <div class="dropdown" onclick="toggleDropdown(event)">
-        <a href="#">Games</a>
+        <a href="#" role="button" aria-haspopup="true" aria-expanded="false" onclick="event.preventDefault()">Games</a>
         <div class="dropdown-content">
           <a href="wordle-adaptive.html">Wordle</a>
           <a href="memory-adaptive.html">Memory Game</a>
@@ -278,7 +279,7 @@
     </div>
   </nav>
 
-  <main class="container">
+  <main id="main-content" class="container">
     <div id="sessionInfo" class="session-info"></div>
 
     <div id="setup" class="game-section">
@@ -293,18 +294,18 @@
       <div id="hangman">Petals: <span id="lives"></span> / 8</div>
       <div id="word"></div>
       <div class="input-container">
-        <input type="text" id="guessInput" maxlength="1" placeholder="?" autocomplete="off" autofocus>
+        <input type="text" id="guessInput" maxlength="1" placeholder="?" autocomplete="off" autofocus aria-label="Enter a letter">
         <button id="submitGuess">Guess</button>
       </div>
       <div id="guessedLetters"></div>
-      <div id="message"></div>
+      <div id="message" aria-live="polite" aria-atomic="true"></div>
       <div id="image-container">
-        <img id="hangmanImage" src="flower/flower0.jpg" alt="Flower blooming">
+        <img id="hangmanImage" src="flower/flower0.jpg" alt="Flower with 0 petals - 8 guesses remaining">
         <div class="controls">
           <button id="restartBtn">New Game</button>
           <button id="changeLevelBtn">Back</button>
-  
-
+        </div>
+      </div>
     </div>
   </main>
 
@@ -326,16 +327,19 @@
   <script>
     // Nav hamburger toggle
     function toggleMenu() {
-      document.querySelector('.menu-items').classList.toggle('show-menu');
+      const menu = document.querySelector('nav .menu-items');
+      const hamburger = document.querySelector('nav .hamburger');
+      const isOpen = menu.classList.toggle('show-menu');
+      hamburger.setAttribute('aria-expanded', isOpen);
+      hamburger.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
     }
 
     function toggleDropdown(event) {
-      // Only toggle on mobile (when hamburger is visible)
-      if (window.innerWidth <= 600) {
-        event.stopPropagation();
-        const dropdown = event.currentTarget;
-        dropdown.classList.toggle('active');
-      }
+      event.stopPropagation();
+      const dropdown = event.currentTarget;
+      const isOpen = dropdown.classList.toggle('active');
+      const trigger = dropdown.querySelector('a');
+      if (trigger) trigger.setAttribute('aria-expanded', isOpen);
     }
 
     // Custom content from LLM
@@ -351,9 +355,8 @@
     const submitGuess = document.getElementById('submitGuess');
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      // Check for shared content in URL first
-      GameContentLoader.initFromURL();
+    document.addEventListener('DOMContentLoaded', async () => {
+      await GameContentLoader.initFromURLAsync();
       loadCustomContent();
       displaySessionInfo();
     });
@@ -377,12 +380,18 @@
       const infoDiv = document.getElementById('sessionInfo');
 
       if (contentInfo) {
-        infoDiv.innerHTML = `
-          <span>Language: ${contentInfo.language}</span>
-          <span>Difficulty: ${contentInfo.difficulty}</span>
-        `;
+        infoDiv.textContent = '';
+        const langSpan = document.createElement('span');
+        langSpan.textContent = 'Language: ' + contentInfo.language;
+        const diffSpan = document.createElement('span');
+        diffSpan.textContent = 'Difficulty: ' + contentInfo.difficulty;
+        infoDiv.appendChild(langSpan);
+        infoDiv.appendChild(diffSpan);
       } else {
-        infoDiv.innerHTML = '<span>Using default Italian content</span>';
+        infoDiv.textContent = '';
+        const defaultSpan = document.createElement('span');
+        defaultSpan.textContent = 'Using default Italian content';
+        infoDiv.appendChild(defaultSpan);
       }
     }
 
@@ -513,7 +522,9 @@
 
     function updateImage() {
       const mistakes = totalLives - lives;
-      document.getElementById('hangmanImage').src = `flower/flower${mistakes}.jpg`;
+      const img = document.getElementById('hangmanImage');
+      img.src = `flower/flower${mistakes}.jpg`;
+      img.alt = `Flower with ${mistakes} petal${mistakes !== 1 ? 's' : ''} - ${lives} guess${lives !== 1 ? 'es' : ''} remaining`;
     }
   </script>
 </body>

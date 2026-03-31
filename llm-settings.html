@@ -17,18 +17,19 @@
   </script>
 </head>
 <body>
+  <a class="sr-only skip-link" href="#main-content">Skip to main content</a>
   <header>
     <div class="header-content">
       <img src="imgs/header.png" alt="LanGames">
     </div>
   </header>
-  <nav>
-    <div class="hamburger" onclick="toggleMenu()">☰</div>
-    <div class="menu-items">
+  <nav aria-label="Main navigation">
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="main-menu"><span aria-hidden="true">☰</span></button>
+    <div class="menu-items" id="main-menu">
       <a href="index.html">Home</a>
       <a href="llm-settings.html" class="active" aria-current="page">Settings</a>
       <div class="dropdown" onclick="toggleDropdown(event)">
-        <a href="#">Games</a>
+        <a href="#" role="button" aria-haspopup="true" aria-expanded="false" onclick="event.preventDefault()">Games</a>
         <div class="dropdown-content">
           <a href="wordle-adaptive.html">Wordle</a>
           <a href="memory-adaptive.html">Memory Game</a>
@@ -42,25 +43,27 @@
   <script>
     function toggleMenu() {
       const menu = document.querySelector('nav .menu-items');
-      menu.classList.toggle('show-menu');
+      const hamburger = document.querySelector('nav .hamburger');
+      const isOpen = menu.classList.toggle('show-menu');
+      hamburger.setAttribute('aria-expanded', isOpen);
+      hamburger.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
     }
 
     function toggleDropdown(event) {
-      // Only toggle on mobile (when hamburger is visible)
-      if (window.innerWidth <= 600) {
-        event.stopPropagation();
-        const dropdown = event.currentTarget;
-        dropdown.classList.toggle('active');
-      }
+      event.stopPropagation();
+      const dropdown = event.currentTarget;
+      const isOpen = dropdown.classList.toggle('active');
+      const trigger = dropdown.querySelector('a');
+      if (trigger) trigger.setAttribute('aria-expanded', isOpen);
     }
   </script>
 
-  <main class="container settings-container">
+  <main id="main-content" class="container settings-container">
     <h2>Settings & Content Generation</h2>
     <p>Configure your AI provider, generate custom content, and manage your learning materials.</p>
 
     <!-- Alert Container -->
-    <div id="alertContainer"></div>
+    <div id="alertContainer" aria-live="polite"></div>
 
     <!-- =========================
          SECTION 1: API Configuration
@@ -91,7 +94,7 @@
           <label for="openrouter-key">API Key</label>
           <div class="password-wrapper">
             <input type="password" id="openrouter-key" placeholder="sk-or-v1-...">
-            <button type="button" class="password-toggle" onclick="togglePassword('openrouter-key')">👁️</button>
+            <button type="button" class="password-toggle" onclick="togglePassword('openrouter-key')" aria-label="Show password"><span aria-hidden="true">👁️</span></button>
           </div>
         </div>
         <div class="form-group">
@@ -117,7 +120,7 @@
           <label for="openwebui-key">API Key</label>
           <div class="password-wrapper">
             <input type="password" id="openwebui-key" placeholder="Your Open Web UI API key">
-            <button type="button" class="password-toggle" onclick="togglePassword('openwebui-key')">👁️</button>
+            <button type="button" class="password-toggle" onclick="togglePassword('openwebui-key')" aria-label="Show password"><span aria-hidden="true">👁️</span></button>
           </div>
         </div>
         <div class="form-group">
@@ -210,9 +213,9 @@
     </section>
 
     <!-- Progress Modal -->
-    <div class="modal-overlay" id="progressModal">
+    <div class="modal-overlay" id="progressModal" role="dialog" aria-modal="true" aria-labelledby="progressModalTitle">
       <div class="modal-content">
-        <h3 style="text-align: center; margin-top: 0;">Generating Content</h3>
+        <h3 id="progressModalTitle" style="text-align: center; margin-top: 0;">Generating Content</h3>
         <p style="text-align: center; color: var(--text-muted);">Please wait while we create your custom learning materials...</p>
 
         <div class="progress-bar">
@@ -241,8 +244,8 @@
       </div>
 
       <div class="content-actions">
-        <button class="btn-export" onclick="exportContent()">📥 Export Content</button>
-        <button class="btn-share" onclick="generateShareLink()">🔗 Share Link</button>
+        <button class="btn-export" onclick="exportContent()"><span aria-hidden="true">📥</span> Export Content</button>
+        <button class="btn-share" onclick="generateShareLink()"><span aria-hidden="true">🔗</span> Share Link</button>
         <label for="importFile" class="btn-import">
           📤 Import Content
         </label>
@@ -260,10 +263,10 @@
     </section>
 
     <!-- Share Link Modal -->
-    <div id="shareLinkModal" class="modal" style="display: none;">
+    <div id="shareLinkModal" class="modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="shareLinkModalTitle">
       <div class="modal-content">
         <div class="modal-header">
-          <h3>📤 Share Link</h3>
+          <h3 id="shareLinkModalTitle"><span aria-hidden="true">📤</span> Share Link</h3>
           <button class="modal-close" onclick="closeShareModal()">&times;</button>
         </div>
         <div class="modal-body">
@@ -425,13 +428,16 @@
     function togglePassword(inputId) {
       const input = document.getElementById(inputId);
       const button = input.nextElementSibling;
+      const icon = button.querySelector('span');
 
       if (input.type === 'password') {
         input.type = 'text';
-        button.textContent = '🙈';
+        if (icon) icon.textContent = '🙈';
+        button.setAttribute('aria-label', 'Hide password');
       } else {
         input.type = 'password';
-        button.textContent = '👁️';
+        if (icon) icon.textContent = '👁️';
+        button.setAttribute('aria-label', 'Show password');
       }
     }
 
@@ -752,39 +758,35 @@
       document.getElementById('shareFallbackState').style.display = 'none';
     }
 
-    function copyShareLink() {
+    async function copyShareLink() {
       const input = document.getElementById('shareURLInput');
-      input.select();
-      input.setSelectionRange(0, 99999); // For mobile devices
-
       try {
-        document.execCommand('copy');
-        const copyBtn = event.target;
-        const originalText = copyBtn.textContent;
-        copyBtn.textContent = '✅ Copied!';
-        setTimeout(() => {
-          copyBtn.textContent = originalText;
-        }, 2000);
+        await navigator.clipboard.writeText(input.value);
+        const copyBtn = document.querySelector('#shareSuccessState .btn-copy');
+        if (copyBtn) {
+          const originalText = copyBtn.textContent;
+          copyBtn.textContent = '✅ Copied!';
+          setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
+        }
       } catch (error) {
-        showAlert('error', 'Failed to copy. Please select and copy manually.');
+        input.select();
+        showAlert('error', 'Failed to copy. Please select the text and use Ctrl+C / Cmd+C.');
       }
     }
 
-    function copyShareLinkFallback() {
+    async function copyShareLinkFallback() {
       const input = document.getElementById('shareURLInputFallback');
-      input.select();
-      input.setSelectionRange(0, 99999); // For mobile devices
-
       try {
-        document.execCommand('copy');
-        const copyBtn = event.target;
-        const originalText = copyBtn.textContent;
-        copyBtn.textContent = '✅ Copied!';
-        setTimeout(() => {
-          copyBtn.textContent = originalText;
-        }, 2000);
+        await navigator.clipboard.writeText(input.value);
+        const copyBtn = document.querySelector('#shareFallbackState .btn-copy');
+        if (copyBtn) {
+          const originalText = copyBtn.textContent;
+          copyBtn.textContent = '✅ Copied!';
+          setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
+        }
       } catch (error) {
-        showAlert('error', 'Failed to copy. Please select and copy manually.');
+        input.select();
+        showAlert('error', 'Failed to copy. Please select the text and use Ctrl+C / Cmd+C.');
       }
     }
 
@@ -804,7 +806,7 @@
       const container = document.getElementById('alertContainer');
       const alert = document.createElement('div');
       alert.className = `alert alert-${type}`;
-      alert.innerHTML = message;
+      alert.textContent = message;
 
       container.innerHTML = '';
       container.appendChild(alert);

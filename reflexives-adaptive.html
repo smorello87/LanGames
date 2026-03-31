@@ -40,18 +40,19 @@
   </script>
 </head>
 <body>
+  <a class="sr-only skip-link" href="#main-content">Skip to main content</a>
   <header>
     <div class="header-content">
       <img src="imgs/header.png" alt="LanGames - Reflexive Verbs">
     </div>
   </header>
-  <nav>
-    <div class="hamburger" onclick="toggleMenu()">☰</div>
-    <div class="menu-items">
+  <nav aria-label="Main navigation">
+    <button class="hamburger" onclick="toggleMenu()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="main-menu"><span aria-hidden="true">☰</span></button>
+    <div class="menu-items" id="main-menu">
       <a href="index.html">Home</a>
       <a href="llm-settings.html">Settings</a>
       <div class="dropdown" onclick="toggleDropdown(event)">
-        <a href="#">Games</a>
+        <a href="#" role="button" aria-haspopup="true" aria-expanded="false" onclick="event.preventDefault()">Games</a>
         <div class="dropdown-content">
           <a href="wordle-adaptive.html">Wordle</a>
           <a href="memory-adaptive.html">Memory Game</a>
@@ -65,20 +66,22 @@
   <script>
     function toggleMenu() {
       const menu = document.querySelector('nav .menu-items');
-      menu.classList.toggle('show-menu');
+      const hamburger = document.querySelector('nav .hamburger');
+      const isOpen = menu.classList.toggle('show-menu');
+      hamburger.setAttribute('aria-expanded', isOpen);
+      hamburger.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
     }
 
     function toggleDropdown(event) {
-      // Only toggle on mobile (when hamburger is visible)
-      if (window.innerWidth <= 600) {
-        event.stopPropagation();
-        const dropdown = event.currentTarget;
-        dropdown.classList.toggle('active');
-      }
+      event.stopPropagation();
+      const dropdown = event.currentTarget;
+      const isOpen = dropdown.classList.toggle('active');
+      const trigger = dropdown.querySelector('a');
+      if (trigger) trigger.setAttribute('aria-expanded', isOpen);
     }
   </script>
 
-  <main class="container">
+  <main id="main-content" class="container">
     <div id="sessionInfo" class="session-info"></div>
 
     <!-- Start Screen -->
@@ -94,14 +97,14 @@
     <!-- Spin the Wheel Game Section -->
     <section id="spin" class="game-section" style="display:none;">
       <h2>Spin the Wheel - Reflexive Verbs</h2>
-      <canvas id="wheelCanvas" width="500" height="500"></canvas>
+      <canvas id="wheelCanvas" width="500" height="500" role="img" aria-label="Spinning verb wheel"></canvas>
       <button onclick="spinWheel()">Spin!</button>
-      <div id="spinResult" style="margin-top: 20px; font-size: 18px;"></div>
+      <div id="spinResult" style="margin-top: 20px; font-size: 18px;" aria-live="polite"></div>
       <div id="conjugationInput" style="margin-top:20px; display:none;">
-        <input type="text" id="userConjugation" placeholder="Enter conjugation" style="font-size: 16px;">
+        <input type="text" id="userConjugation" placeholder="Enter conjugation" aria-label="Enter verb conjugation" style="font-size: 16px;">
         <button onclick="checkConjugation()">Submit</button>
-
-      <div id="spinFeedback" style="margin-top:10px; font-weight: bold;"></div>
+      </div>
+      <div id="spinFeedback" style="margin-top:10px; font-weight: bold;" aria-live="polite" aria-atomic="true"></div>
       <button onclick="goBack()">Back to Start</button>
       <br><br>
       <a href="llm-settings.html">Back to Settings</a>
@@ -127,6 +130,7 @@
     // Custom content from LLM
     let verbsData = [];
     let subjects = ["io", "tu", "lui", "lei", "noi", "voi", "loro"];
+    let currentSpinInterval = null;
 
     // Canvas setup
     const canvas = document.getElementById('wheelCanvas');
@@ -142,9 +146,8 @@
     let currentSubject = "";
 
     // Initialize
-    document.addEventListener('DOMContentLoaded', () => {
-      // Check for shared content in URL first
-      GameContentLoader.initFromURL();
+    document.addEventListener('DOMContentLoaded', async () => {
+      await GameContentLoader.initFromURLAsync();
       loadCustomContent();
       displaySessionInfo();
     });
@@ -193,12 +196,18 @@
       const infoDiv = document.getElementById('sessionInfo');
 
       if (contentInfo) {
-        infoDiv.innerHTML = `
-          <span>Language: ${contentInfo.language}</span>
-          <span>Difficulty: ${contentInfo.difficulty}</span>
-        `;
+        infoDiv.textContent = '';
+        const langSpan = document.createElement('span');
+        langSpan.textContent = 'Language: ' + contentInfo.language;
+        const diffSpan = document.createElement('span');
+        diffSpan.textContent = 'Difficulty: ' + contentInfo.difficulty;
+        infoDiv.appendChild(langSpan);
+        infoDiv.appendChild(diffSpan);
       } else {
-        infoDiv.innerHTML = '<span>Using default Italian content</span>';
+        infoDiv.textContent = '';
+        const defaultSpan = document.createElement('span');
+        defaultSpan.textContent = 'Using default Italian content';
+        infoDiv.appendChild(defaultSpan);
       }
     }
 
@@ -274,13 +283,14 @@
       spinning = true;
       spinSpeed = Math.random() * 0.3 + 0.3;
 
-      const spinInterval = setInterval(() => {
+      currentSpinInterval = setInterval(() => {
         spinAngle += spinSpeed;
         spinSpeed *= 0.99;
         drawWheel();
 
         if (spinSpeed < 0.002) {
-          clearInterval(spinInterval);
+          clearInterval(currentSpinInterval);
+          currentSpinInterval = null;
           spinning = false;
           selectVerb();
         }
@@ -386,6 +396,11 @@
     }
 
     function goBack() {
+      if (currentSpinInterval) {
+        clearInterval(currentSpinInterval);
+        currentSpinInterval = null;
+        spinning = false;
+      }
       document.getElementById('spin').style.display = "none";
       document.getElementById('startScreen').style.display = "block";
     }

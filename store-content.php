@@ -5,7 +5,13 @@
  */
 
 header('Content-Type: application/json');
-header('Access-Control-Allow-Origin: *');
+$allowedOrigins = ['https://stefanomorello.com', 'http://localhost:8765', 'http://127.0.0.1:8765'];
+$origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+if (in_array($origin, $allowedOrigins)) {
+    header('Access-Control-Allow-Origin: ' . $origin);
+} else {
+    header('Access-Control-Allow-Origin: https://stefanomorello.com');
+}
 header('Access-Control-Allow-Methods: POST, OPTIONS');
 header('Access-Control-Allow-Headers: Content-Type');
 
@@ -28,6 +34,28 @@ if (!is_dir($CONTENT_DIR)) {
         exit();
     }
 }
+
+// Simple rate limiting by IP (max 10 stores per hour)
+$rateLimitDir = $CONTENT_DIR . '.ratelimit/';
+if (!is_dir($rateLimitDir)) {
+    mkdir($rateLimitDir, 0755, true);
+}
+$clientIP = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
+$rateLimitFile = $rateLimitDir . md5($clientIP) . '.json';
+$rateLimit = ['count' => 0, 'reset' => time() + 3600];
+if (file_exists($rateLimitFile)) {
+    $rateLimit = json_decode(file_get_contents($rateLimitFile), true) ?: $rateLimit;
+    if ($rateLimit['reset'] < time()) {
+        $rateLimit = ['count' => 0, 'reset' => time() + 3600];
+    }
+}
+if ($rateLimit['count'] >= 10) {
+    http_response_code(429);
+    echo json_encode(['error' => 'Rate limit exceeded. Try again later.']);
+    exit();
+}
+$rateLimit['count']++;
+file_put_contents($rateLimitFile, json_encode($rateLimit));
 
 // Only accept POST requests
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -98,9 +126,11 @@ $content['_meta'] = [
 // Save content
 if (file_put_contents($filename, json_encode($content, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT))) {
     // Build the share URL
-    $protocol = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https://' : 'http://';
-    $baseDir = dirname($_SERVER['REQUEST_URI']);
-    $baseURL = $protocol . $_SERVER['HTTP_HOST'] . rtrim($baseDir, '/');
+    // Use canonical base URL to prevent Host header injection
+    $isLocal = in_array($_SERVER['HTTP_HOST'] ?? '', ['localhost:8765', '127.0.0.1:8765'], true);
+    $baseURL = $isLocal
+        ? 'http://' . $_SERVER['HTTP_HOST'] . rtrim(dirname($_SERVER['REQUEST_URI']), '/')
+        : 'https://stefanomorello.com/langames';
 
     echo json_encode([
         'success' => true,

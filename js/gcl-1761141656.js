@@ -512,7 +512,11 @@ const GameContentLoader = {
       }
 
       // Save to localStorage for future use
-      this.saveContent(content);
+      if (!this.saveContent(content)) {
+        console.error('Storage quota exceeded when loading content from URL');
+        alert('Storage quota exceeded. Please clear some browser data and try again.');
+        return null;
+      }
       this.saveSession(content.language, content.difficulty);
 
       console.log('Content loaded from URL:', content.language, content.difficulty);
@@ -535,7 +539,10 @@ const GameContentLoader = {
       // Load from server asynchronously
       this.loadContentFromServer(contentId).then(content => {
         if (content) {
-          this.saveContent(content);
+          if (!this.saveContent(content)) {
+            alert('Storage quota exceeded. Please clear some browser data and try again.');
+            return;
+          }
           this.saveSession(content.language, content.difficulty);
           // Clean URL
           const url = new URL(window.location);

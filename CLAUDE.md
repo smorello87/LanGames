@@ -117,7 +117,7 @@ All these MUST be defined in styles-v3.css for games to work properly:
   - Tries multiple free services: is.gd (primary), v.gd, Clck.ru, dagd
   - Final short URL is typically 20-30 characters
   - No deprecated APIs - all services are actively maintained (as of 2025)
-- URL automatically parsed on page load via `GameContentLoader.initFromURL()`
+- URL automatically parsed on page load via `GameContentLoader.initFromURLAsync()`
 - Content is saved to student's localStorage for persistent access
 - URL fragment is removed from browser history for clean URLs
 
@@ -126,7 +126,7 @@ All these MUST be defined in styles-v3.css for games to work properly:
 - `js/gcl-1761141656.js`: Updated `shortenURL()` to call PHP proxy instead of APIs directly
 - `llm-settings.html`: Automatic shortening workflow in modal
 - `index.html`: Checks for URL content on landing page
-- All game files: Call `GameContentLoader.initFromURL()` on page load
+- All game files: Call `GameContentLoader.initFromURLAsync()` on page load
 - `css/adaptive-v3.css`: Modal and button styles for share UI
 - `css/styles-v3.css`: Added `--color-orange` variable
 
@@ -139,6 +139,12 @@ All these MUST be defined in styles-v3.css for games to work properly:
 - API keys are NEVER included in share URLs - only generated content is shared
 - Warning in UI advises users not to generate content on shared/public computers
 - API configuration stays private in each user's browser localStorage
+- PHP endpoints use origin-based CORS allowlist (not wildcard `*`)
+- `store-content.php` has IP-based rate limiting (10 stores/hour)
+- `shorten-url.php` blocks SSRF (private IPs, non-http schemes, no redirect following)
+- Share URLs use hardcoded canonical base URL to prevent Host header injection
+- All user-facing text uses `textContent` (not `innerHTML`) to prevent XSS
+- API key prefix is NOT logged to browser console
 
 **PHP Proxy Architecture:**
 ```
@@ -373,16 +379,18 @@ Games should display the selected language and difficulty from stored content in
 
 ### Navigation Structure
 
-Navigation is consistent across all 7 HTML files:
+Navigation is consistent across all 7 HTML files. Includes skip-link, ARIA attributes, and keyboard accessibility:
 
 ```html
-<nav>
-  <div class="hamburger" onclick="toggleMenu()">☰</div>
-  <div class="menu-items">
+<a class="sr-only skip-link" href="#main-content">Skip to main content</a>
+<!-- ... header ... -->
+<nav aria-label="Main navigation">
+  <button class="hamburger" onclick="toggleMenu()" aria-label="Open navigation menu" aria-expanded="false" aria-controls="main-menu"><span aria-hidden="true">☰</span></button>
+  <div class="menu-items" id="main-menu">
     <a href="index.html">Home</a>
     <a href="llm-settings.html">Settings</a>
     <div class="dropdown" onclick="toggleDropdown(event)">
-      <a href="#">Games</a>
+      <a href="#" role="button" aria-haspopup="true" aria-expanded="false" onclick="event.preventDefault()">Games</a>
       <div class="dropdown-content">
         <a href="wordle-adaptive.html">Wordle</a>
         <a href="memory-adaptive.html">Memory Game</a>
@@ -393,30 +401,35 @@ Navigation is consistent across all 7 HTML files:
     </div>
   </div>
 </nav>
+<!-- ... -->
+<main id="main-content" class="container">
 ```
 
 **Required JavaScript for Navigation:**
 ```javascript
 function toggleMenu() {
   const menu = document.querySelector('nav .menu-items');
-  menu.classList.toggle('show-menu');
+  const hamburger = document.querySelector('nav .hamburger');
+  const isOpen = menu.classList.toggle('show-menu');
+  hamburger.setAttribute('aria-expanded', isOpen);
+  hamburger.setAttribute('aria-label', isOpen ? 'Close navigation menu' : 'Open navigation menu');
 }
 
 function toggleDropdown(event) {
-  // Only toggle on mobile (when hamburger is visible)
-  if (window.innerWidth <= 600) {
-    event.stopPropagation();
-    const dropdown = event.currentTarget;
-    dropdown.classList.toggle('active');
-  }
+  event.stopPropagation();
+  const dropdown = event.currentTarget;
+  const isOpen = dropdown.classList.toggle('active');
+  const trigger = dropdown.querySelector('a');
+  if (trigger) trigger.setAttribute('aria-expanded', isOpen);
 }
 ```
 
 **When updating navigation:**
 - Update ALL 7 HTML files
-- Maintain hamburger menu for mobile
+- Maintain hamburger `<button>` (not `<div>`) with ARIA attributes
 - Keep dropdown z-index above game content
 - Ensure both `toggleMenu()` and `toggleDropdown()` functions are present
+- Dropdown toggles on all viewport widths (not mobile-only)
 
 ### Flower Game (fiore-adaptive.html)
 
@@ -491,10 +504,45 @@ Password input fields with toggle buttons require special CSS:
 **Input Font Size**: 16px minimum to prevent iOS auto-zoom
 
 **Mobile Dropdown Behavior:**
-- Desktop (>600px): Hover to expand dropdown
+- Desktop (>600px): Hover OR click to expand dropdown
 - Mobile (≤600px): Click to toggle dropdown via `toggleDropdown(event)`
 - CSS uses `.dropdown.active .dropdown-content { max-height: 500px; }` for expansion
 - Without `toggleDropdown()` function, mobile dropdowns won't work
+- Dropdown trigger uses `role="button"` + `aria-haspopup` + `aria-expanded` for keyboard access
+
+## Accessibility (WCAG 2.1 AA)
+
+### Required Patterns for All Pages
+- **Skip link**: Every page starts with `<a class="sr-only skip-link" href="#main-content">` (visible on focus)
+- **Page landmark**: `<main id="main-content">` as skip target
+- **Nav label**: `<nav aria-label="Main navigation">`
+- **Hamburger button**: Must be `<button>` (not `<div>`) with `aria-expanded` and `aria-label`
+- **Focus indicators**: Use `outline: 3px solid transparent` (not `outline: none`) so outlines appear in Windows High Contrast Mode. Forced-colors media query provides explicit fallback.
+
+### Game-Specific Accessibility
+- **Session info**: Use `textContent` (never `innerHTML`) to display language/difficulty from stored content
+- **Feedback regions**: All game feedback divs must have `aria-live="polite" aria-atomic="true"`
+- **Game inputs**: Must have `aria-label` (e.g., `aria-label="Enter your 5-letter guess"`)
+- **Memory cards**: Use `role="button"`, `tabindex="0"`, `aria-label`, and keyboard handlers (Enter/Space)
+- **Canvas wheels**: Use `role="img"` + `aria-label="Spinning verb wheel"`, with `aria-live` on result div
+- **Flower image**: `alt` text must update dynamically in `updateImage()` to reflect petal count
+
+### Modal Accessibility
+- Progress and share modals require: `role="dialog"`, `aria-modal="true"`, `aria-labelledby`
+- FAQ buttons require: `aria-expanded` toggled by `toggleFAQ()`
+- Password toggles: `aria-label` switches between "Show password"/"Hide password"
+
+### Decorative Content
+- Emoji in buttons must be wrapped in `<span aria-hidden="true">` to prevent screen reader confusion
+- FAQ arrow spans use `aria-hidden="true"`
+
+### LLM Response Validation (Security + Accessibility)
+All `content-generator.js` parsers validate response structure before storing:
+- Wordle: must be non-empty array of strings
+- Memory: must be non-empty array with language key + english field per pair
+- Verb tenses/reflexives: must be non-empty array with infinitive, english, conjugations per entry
+
+This prevents malformed LLM output from breaking games with confusing error states.
 
 ## Common Issues and Solutions
 
@@ -568,7 +616,7 @@ Password input fields with toggle buttons require special CSS:
 **Fix**: Update all HTML files to reference `<script src="js/gcl-1761141656.js" defer></script>`
 
 **Cause**: URL fragment not being parsed on page load
-**Fix**: Ensure `GameContentLoader.initFromURL()` is called in DOMContentLoaded handler before `loadCustomContent()`
+**Fix**: Ensure `await GameContentLoader.initFromURLAsync()` is called in async DOMContentLoaded handler before `loadCustomContent()`
 
 **Cause**: URL too long (>13k chars) causing Apache "Request-URI Too Long" error
 **Fix**: Update to use URL fragment (`#content=`) instead of query parameter (`?content=`). Fragments bypass server length limits.
@@ -585,7 +633,7 @@ Password input fields with toggle buttons require special CSS:
 
 ### Copy Button Not Working
 **Cause**: Browser security restrictions on clipboard access
-**Fix**: System falls back to manual selection - user can click input field and use Ctrl+C/Cmd+C
+**Fix**: Uses `navigator.clipboard.writeText()` (modern API). Falls back to manual selection if that fails - user can click input field and use Ctrl+C/Cmd+C
 
 ## Footer Attribution (REQUIRED)
 

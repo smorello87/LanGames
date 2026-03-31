@@ -65,7 +65,7 @@ const LLMConfig = {
       provider: settings.provider,
       endpoint: settings.endpoint,
       model: settings.model,
-      apiKeyPrefix: settings.apiKey ? settings.apiKey.substring(0, 10) + '...' : 'MISSING'
+      apiKey: settings.apiKey ? '[SET]' : '[MISSING]'
     });
 
     try {
