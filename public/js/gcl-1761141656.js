@@ -193,79 +193,6 @@ const GameContentLoader = {
     };
   },
 
-  // URL-based sharing functionality with compression
-  // Simple LZ-based compression for strings
-  _compress(str) {
-    try {
-      // Use built-in browser compression if available
-      const compressed = this._lzwCompress(str);
-      return compressed;
-    } catch (error) {
-      console.error('Compression failed:', error);
-      return str; // Return original if compression fails
-    }
-  },
-
-  _decompress(str) {
-    try {
-      const decompressed = this._lzwDecompress(str);
-      return decompressed;
-    } catch (error) {
-      console.error('Decompression failed:', error);
-      return str; // Return as-is if decompression fails
-    }
-  },
-
-  // LZW compression algorithm
-  _lzwCompress(str) {
-    const dict = {};
-    const data = (str + '').split('');
-    const out = [];
-    let currChar;
-    let phrase = data[0];
-    let code = 256;
-
-    for (let i = 1; i < data.length; i++) {
-      currChar = data[i];
-      if (dict[phrase + currChar] != null) {
-        phrase += currChar;
-      } else {
-        out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
-        dict[phrase + currChar] = code;
-        code++;
-        phrase = currChar;
-      }
-    }
-    out.push(phrase.length > 1 ? dict[phrase] : phrase.charCodeAt(0));
-
-    // Convert array of codes to Uint16Array (codes can be > 255)
-    return new Uint16Array(out);
-  },
-
-  _lzwDecompress(data) {
-    const dict = {};
-    let currChar = String.fromCharCode(data[0]);
-    let oldPhrase = currChar;
-    const out = [currChar];
-    let code = 256;
-    let phrase;
-
-    for (let i = 1; i < data.length; i++) {
-      const currCode = data[i];
-      if (currCode < 256) {
-        phrase = String.fromCharCode(data[i]);
-      } else {
-        phrase = dict[currCode] ? dict[currCode] : (oldPhrase + currChar);
-      }
-      out.push(phrase);
-      currChar = phrase.charAt(0);
-      dict[code] = oldPhrase + currChar;
-      code++;
-      oldPhrase = phrase;
-    }
-    return out.join('');
-  },
-
   // Encode content for URL sharing (uses lz-string compression if available)
   encodeContentForURL(content) {
     try {
@@ -274,12 +201,6 @@ const GameContentLoader = {
       // Try lz-string compression if available (50-70% smaller)
       if (typeof LZString !== 'undefined') {
         const compressed = LZString.compressToEncodedURIComponent(jsonStr);
-        console.log('Compression stats:', {
-          original: jsonStr.length,
-          compressed: compressed.length,
-          ratio: ((compressed.length / jsonStr.length) * 100).toFixed(1) + '%',
-          method: 'lz-string'
-        });
         // Prefix with 'z_' to identify compressed format
         return 'z_' + compressed;
       }
@@ -289,13 +210,6 @@ const GameContentLoader = {
         .replace(/\+/g, '-')
         .replace(/\//g, '_')
         .replace(/=+$/, '');
-
-      console.log('Encoding stats:', {
-        original: jsonStr.length,
-        base64: base64.length,
-        ratio: ((base64.length / jsonStr.length) * 100).toFixed(1) + '%',
-        method: 'base64'
-      });
 
       return base64;
     } catch (error) {
@@ -352,8 +266,6 @@ const GameContentLoader = {
       // Use fragment (#) instead of query parameter (?) to bypass server URL length limits
       const shareURL = `${baseURL}#content=${encoded}`;
 
-      console.log('Generated URL:', shareURL.length, 'characters');
-
       return shareURL;
     } catch (error) {
       console.error('Failed to generate share URL:', error);
@@ -361,50 +273,10 @@ const GameContentLoader = {
     }
   },
 
-  // Shorten URL using server API
-  async shortenURL(longURL) {
-    try {
-      console.log('Shortening URL via server API...');
-
-      const proxyURL = '/api/shorten-url';
-
-      const response = await fetch(proxyURL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ url: longURL })
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-
-      if (data.success && data.shorturl) {
-        console.log(`✅ URL shortened with ${data.service}:`, {
-          original: data.original_length,
-          shortened: data.shortened_length,
-          saved: data.original_length - data.shortened_length
-        });
-        return data.shorturl;
-      } else {
-        throw new Error(data.error || 'Unknown error');
-      }
-
-    } catch (error) {
-      console.error('URL shortening failed:', error.message);
-      return null; // Return null if shortening fails, caller can use long URL
-    }
-  },
-
   // Store content on server (primary sharing method - returns short ID)
   async storeContentOnServer(content) {
     try {
       const storeURL = '/api/store-content';
-      console.log('Storing content on server...');
 
       const response = await fetch(storeURL, {
         method: 'POST',
@@ -419,11 +291,6 @@ const GameContentLoader = {
 
       const data = await response.json();
       if (data.success && data.url) {
-        console.log('Content stored successfully:', {
-          id: data.id,
-          expires: data.expires,
-          url: data.url
-        });
         return {
           url: data.url,
           id: data.id,
@@ -442,7 +309,6 @@ const GameContentLoader = {
   async loadContentFromServer(id) {
     try {
       const getURL = '/api/get-content?id=' + encodeURIComponent(id);
-      console.log('Loading content from server, ID:', id);
 
       const response = await fetch(getURL);
       if (!response.ok) {
@@ -452,7 +318,6 @@ const GameContentLoader = {
       }
 
       const content = await response.json();
-      console.log('Content loaded from server:', content.language, content.difficulty);
       return content;
     } catch (error) {
       console.error('Server load failed:', error);
@@ -504,7 +369,6 @@ const GameContentLoader = {
       }
       this.saveSession(content.language, content.difficulty);
 
-      console.log('Content loaded from URL:', content.language, content.difficulty);
       return content;
     } catch (error) {
       console.error('Error loading content from URL:', error);

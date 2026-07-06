@@ -264,8 +264,8 @@
       <div class="alert alert-info" style="margin-top: var(--spacing-lg);">
         <strong>For Teachers:</strong> Generate content and share it with students in two ways:
         <ul style="margin: var(--spacing-sm) 0 0 var(--spacing-lg); padding-left: 0;">
-          <li><strong>Share Link (Recommended):</strong> Generate a shortened URL (~25 chars) that students can click to instantly load your content - easiest method!</li>
-          <li><strong>Export File:</strong> Download JSON file for students to import manually (backup method if URL shortening fails)</li>
+          <li><strong>Share Link (Recommended):</strong> Generate a short link that students can click to instantly load your content — easiest method!</li>
+          <li><strong>Export File:</strong> Download a JSON file for students to import manually (works offline)</li>
         </ul>
         Students don't need their own API key to use shared content!
       </div>
@@ -279,7 +279,7 @@
           <button class="modal-close" onclick="closeShareModal()">&times;</button>
         </div>
         <div class="modal-body">
-          <!-- Progress State (shown while shortening) -->
+          <!-- Progress State (shown while saving to server) -->
           <div id="shareProgressState" style="display: none;">
             <p style="text-align: center; color: var(--text-dark); font-size: 1.1rem; font-weight: 500; margin-bottom: var(--spacing-lg);">
               Generating shareable link...
@@ -289,9 +289,9 @@
             </div>
           </div>
 
-          <!-- Success State (shown after shortening succeeds) -->
+          <!-- Success State (shown after the link is ready) -->
           <div id="shareSuccessState" style="display: none;">
-            <p style="margin-bottom: var(--spacing-lg); color: var(--text-muted); text-align: center;">
+            <p id="shareResultNote" style="margin-bottom: var(--spacing-lg); color: var(--text-muted); text-align: center;">
               Share this link with your students. When they click it, the content will automatically load!
             </p>
             <div class="share-url-container">
@@ -299,25 +299,6 @@
               <button class="btn-copy" onclick="copyShareLink()">📋 Copy</button>
             </div>
             <p id="shareExpiresInfo" style="text-align: center; color: var(--text-light); font-size: 0.85rem; margin-top: var(--spacing-sm);"></p>
-            <div class="share-instructions">
-              <strong>How students use this link:</strong>
-              <ol>
-                <li>Click the link or paste it into their browser</li>
-                <li>Content automatically loads and saves to their browser</li>
-                <li>Play any of the 5 games with your curated content!</li>
-              </ol>
-            </div>
-          </div>
-
-          <!-- Fallback State (shown if shortening fails) -->
-          <div id="shareFallbackState" style="display: none;">
-            <p style="margin-bottom: var(--spacing-md); color: var(--text-muted); text-align: center;">
-              Here's your shareable link <span style="color: var(--text-light); font-size: 0.9rem;">(you may want to shorten it)</span>
-            </p>
-            <div class="share-url-container">
-              <input type="text" id="shareURLInputFallback" readonly onclick="this.select()">
-              <button class="btn-copy" onclick="copyShareLinkFallback()">📋 Copy</button>
-            </div>
             <div class="share-instructions">
               <strong>How students use this link:</strong>
               <ol>
@@ -755,64 +736,32 @@
           return;
         }
 
-        // Show modal with progress state
+        // Show modal in progress state
         document.getElementById('shareLinkModal').style.display = 'flex';
         document.getElementById('shareProgressState').style.display = 'block';
         document.getElementById('shareSuccessState').style.display = 'none';
-        document.getElementById('shareFallbackState').style.display = 'none';
         document.getElementById('shareExpiresInfo').textContent = '';
 
-        // Update progress message
-        const progressMsg = document.querySelector('#shareProgressState p');
-        progressMsg.textContent = 'Saving content to server...';
-
-        // Step 1: Try server storage first (most reliable, shortest URLs)
+        // Primary: server storage → short URL
         const serverResult = await GameContentLoader.storeContentOnServer(content);
 
         if (serverResult && serverResult.url) {
-          // Success with server storage
-          document.getElementById('shareURLInput').value = serverResult.url;
-          document.getElementById('shareExpiresInfo').textContent =
-            serverResult.expiresDate ? `Link expires: ${serverResult.expiresDate}` : `Link expires in ${serverResult.expires}`;
-          document.getElementById('shareProgressState').style.display = 'none';
-          document.getElementById('shareSuccessState').style.display = 'block';
+          showShareResult(serverResult.url,
+            'Share this link with your students. When they click it, the content will automatically load!',
+            serverResult.expiresDate ? `Link expires: ${serverResult.expiresDate}` : `Link expires in ${serverResult.expires}`);
           return;
         }
 
-        // Step 2: Fall back to URL encoding + shortening
-        progressMsg.textContent = 'Server unavailable. Creating compressed link...';
-
+        // Fallback: content encoded in the URL fragment (long, but self-contained)
         const shareURL = GameContentLoader.generateShareURL(content);
         if (!shareURL) {
           showAlert('error', 'Failed to generate share link. Please try exporting as a file instead.');
           closeShareModal();
           return;
         }
-
-        // Step 3: Try to shorten the compressed URL
-        progressMsg.textContent = 'Shortening URL...';
-
-        try {
-          const shortURL = await GameContentLoader.shortenURL(shareURL);
-          if (shortURL) {
-            // Success with shortened URL
-            document.getElementById('shareURLInput').value = shortURL;
-            document.getElementById('shareExpiresInfo').textContent = 'Link does not expire';
-            document.getElementById('shareProgressState').style.display = 'none';
-            document.getElementById('shareSuccessState').style.display = 'block';
-          } else {
-            // Final fallback - show compressed (but still long) URL
-            document.getElementById('shareURLInputFallback').value = shareURL;
-            document.getElementById('shareProgressState').style.display = 'none';
-            document.getElementById('shareFallbackState').style.display = 'block';
-          }
-        } catch (error) {
-          // Final fallback on error - show compressed URL
-          document.getElementById('shareURLInputFallback').value = shareURL;
-          document.getElementById('shareProgressState').style.display = 'none';
-          document.getElementById('shareFallbackState').style.display = 'block';
-          console.error('URL shortening error:', error);
-        }
+        showShareResult(shareURL,
+          'The server is unavailable, so this link carries the content itself. It is long, but works exactly the same way.',
+          'Link does not expire');
 
       } catch (error) {
         showAlert('error', `Failed to generate share link: ${error.message}`);
@@ -820,12 +769,19 @@
       }
     }
 
+    function showShareResult(url, note, expiresText) {
+      document.getElementById('shareURLInput').value = url;
+      document.getElementById('shareResultNote').textContent = note;
+      document.getElementById('shareExpiresInfo').textContent = expiresText;
+      document.getElementById('shareProgressState').style.display = 'none';
+      document.getElementById('shareSuccessState').style.display = 'block';
+    }
+
     function closeShareModal() {
       document.getElementById('shareLinkModal').style.display = 'none';
       // Reset all states for next use
       document.getElementById('shareProgressState').style.display = 'none';
       document.getElementById('shareSuccessState').style.display = 'none';
-      document.getElementById('shareFallbackState').style.display = 'none';
     }
 
     async function copyShareLink() {
@@ -833,22 +789,6 @@
       try {
         await navigator.clipboard.writeText(input.value);
         const copyBtn = document.querySelector('#shareSuccessState .btn-copy');
-        if (copyBtn) {
-          const originalText = copyBtn.textContent;
-          copyBtn.textContent = '✅ Copied!';
-          setTimeout(() => { copyBtn.textContent = originalText; }, 2000);
-        }
-      } catch (error) {
-        input.select();
-        showAlert('error', 'Failed to copy. Please select the text and use Ctrl+C / Cmd+C.');
-      }
-    }
-
-    async function copyShareLinkFallback() {
-      const input = document.getElementById('shareURLInputFallback');
-      try {
-        await navigator.clipboard.writeText(input.value);
-        const copyBtn = document.querySelector('#shareFallbackState .btn-copy');
         if (copyBtn) {
           const originalText = copyBtn.textContent;
           copyBtn.textContent = '✅ Copied!';
