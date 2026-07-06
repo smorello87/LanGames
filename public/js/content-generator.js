@@ -2,6 +2,49 @@
 // Generates educational content for all games
 
 const ContentGenerator = {
+  // --- Client-side content repair (never trust LLM prompt compliance) ---
+
+  // Keep only real 5-letter words; trim, NFC-normalize, dedupe case-insensitively
+  repairWordleWords(words) {
+    if (!Array.isArray(words)) return [];
+    const seen = new Set();
+    const valid = [];
+    for (const raw of words) {
+      if (typeof raw !== 'string') continue;
+      const word = raw.trim().normalize('NFC');
+      if (/\s/.test(word)) continue;
+      if ([...word].length !== 5) continue;
+      const key = word.toLowerCase();
+      if (seen.has(key)) continue;
+      seen.add(key);
+      valid.push(word);
+    }
+    return valid;
+  },
+
+  // Drop pairs that would overflow memory cards (word ≤ 12, english ≤ 14, single words only)
+  repairMemoryPairs(pairs) {
+    if (!Array.isArray(pairs)) return [];
+    return pairs.filter(p =>
+      p && typeof p.word === 'string' && typeof p.english === 'string' &&
+      p.word.length > 0 && p.english.length > 0 &&
+      !/\s/.test(p.word) && !/\s/.test(p.english) &&
+      [...p.word].length <= 12 && [...p.english].length <= 14
+    );
+  },
+
+  // Drop malformed verb entries
+  repairVerbs(verbs) {
+    if (!Array.isArray(verbs)) return [];
+    return verbs.filter(v =>
+      v && typeof v === 'object' &&
+      typeof v.infinitive === 'string' && v.infinitive.length > 0 &&
+      typeof v.english === 'string' && v.english.length > 0 &&
+      v.conjugations && typeof v.conjugations === 'object' &&
+      Object.keys(v.conjugations).length > 0
+    );
+  },
+
   // Generate all content for a language and difficulty
   async generateAllContent(language, difficulty, progressCallback) {
     const settings = LLMConfig.getSettings();
