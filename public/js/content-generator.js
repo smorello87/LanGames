@@ -45,51 +45,115 @@ const ContentGenerator = {
     );
   },
 
-  // Generate all content for a language and difficulty
-  async generateAllContent(language, difficulty, progressCallback) {
+  MEMORY_TOPICS: {
+    food: 'Food and Drink',
+    daily: 'Daily Activities',
+    family: 'Family Members',
+    school: 'School and Education',
+    work: 'Work and Career'
+  },
+
+  SECTION_KEYS: [
+    'wordle', 'memory:food', 'memory:daily', 'memory:family',
+    'memory:school', 'memory:work', 'verbTenses', 'reflexiveVerbs'
+  ],
+
+  sectionLabel(key) {
+    if (key === 'wordle') return 'Wordle words';
+    if (key === 'verbTenses') return 'Verb conjugations';
+    if (key === 'reflexiveVerbs') return 'Reflexive verbs';
+    if (key.startsWith('memory:')) return `Memory — ${this.MEMORY_TOPICS[key.slice(7)]}`;
+    return key;
+  },
+
+  // Dispatch a single section to its generator
+  async generateSection(key, language, difficulty, settings) {
+    if (key === 'wordle') return this.generateWordleWords(language, difficulty, settings);
+    if (key === 'verbTenses') return this.generateVerbTenses(language, difficulty, settings);
+    if (key === 'reflexiveVerbs') return this.generateReflexiveVerbs(language, difficulty, settings);
+    if (key.startsWith('memory:')) return this.generateMemoryTopic(key.slice(7), language, difficulty, settings);
+    throw new Error(`Unknown section: ${key}`);
+  },
+
+  // Run sections concurrently; one retry each; report progress as sections settle
+  async generateSections(keys, language, difficulty, progressCallback) {
     const settings = LLMConfig.getSettings();
     if (!settings) {
       throw new Error('LLM settings not configured. Please configure settings first.');
     }
-
     const validation = LLMConfig.validateSettings(settings);
     if (!validation.valid) {
       throw new Error(`Invalid settings: ${validation.error}`);
     }
 
+    let done = 0;
+    const report = () => {
+      done++;
+      if (progressCallback) {
+        progressCallback(`${done} of ${keys.length} sections complete`, Math.ceil((done / keys.length) * 100));
+      }
+    };
+
+    const settled = await Promise.allSettled(keys.map(async (key) => {
+      try {
+        const value = await this.generateSection(key, language, difficulty, settings);
+        report();
+        return { key, value };
+      } catch (firstError) {
+        console.warn(`Section ${key} failed, retrying once:`, firstError.message);
+        try {
+          const value = await this.generateSection(key, language, difficulty, settings);
+          report();
+          return { key, value };
+        } catch (secondError) {
+          report();
+          throw Object.assign(new Error(secondError.message), { sectionKey: key });
+        }
+      }
+    }));
+
+    const sections = {};
+    const failed = [];
+    settled.forEach((res, i) => {
+      if (res.status === 'fulfilled') {
+        sections[res.value.key] = res.value.value;
+      } else {
+        failed.push({ key: keys[i], error: res.reason.message });
+      }
+    });
+    return { sections, failed };
+  },
+
+  // Merge a sections map into a content object
+  applySections(content, sections) {
+    for (const [key, value] of Object.entries(sections)) {
+      if (key.startsWith('memory:')) {
+        if (!content.memory || typeof content.memory !== 'object') content.memory = {};
+        content.memory[key.slice(7)] = value;
+      } else {
+        content[key] = value;
+      }
+    }
+  },
+
+  // Generate all content for a language and difficulty.
+  // Returns { content, failed }: content holds every successful section;
+  // failed lists sections that failed twice (empty array = full success).
+  async generateAllContent(language, difficulty, progressCallback) {
+    const { sections, failed } = await this.generateSections(
+      this.SECTION_KEYS, language, difficulty, progressCallback
+    );
     const content = {
       language,
       difficulty,
       timestamp: new Date().toISOString(),
       wordle: null,
-      memory: null,
+      memory: {},
       verbTenses: null,
       reflexiveVerbs: null
     };
-
-    try {
-      // Generate Wordle words
-      if (progressCallback) progressCallback('Generating Wordle words...', 0);
-      content.wordle = await this.generateWordleWords(language, difficulty, settings);
-
-      // Generate Memory game content
-      if (progressCallback) progressCallback('Generating Memory game pairs...', 25);
-      content.memory = await this.generateMemoryContent(language, difficulty, settings);
-
-      // Generate Verb Tenses
-      if (progressCallback) progressCallback('Generating verb tenses...', 50);
-      content.verbTenses = await this.generateVerbTenses(language, difficulty, settings);
-
-      // Generate Reflexive Verbs
-      if (progressCallback) progressCallback('Generating reflexive verbs...', 75);
-      content.reflexiveVerbs = await this.generateReflexiveVerbs(language, difficulty, settings);
-
-      if (progressCallback) progressCallback('Content generation complete!', 100);
-
-      return content;
-    } catch (error) {
-      throw new Error(`Content generation failed: ${error.message}`);
-    }
+    this.applySections(content, sections);
+    return { content, failed };
   },
 
   // Generate Wordle words (15 words per difficulty)
@@ -116,18 +180,17 @@ Return ONLY a JSON array of strings, like this:
 No explanations, just the JSON array.`;
 
     const response = await this.callLLM(prompt, settings, 500);
-    console.log('[ContentGenerator] Wordle response length:', response.length);
-    console.log('[ContentGenerator] Wordle response preview:', response.substring(0, 200));
 
     try {
       const words = JSON.parse(response);
       if (!Array.isArray(words) || words.length === 0) {
         throw new Error('Expected an array of words from the API');
       }
-      if (words.some(w => typeof w !== 'string')) {
-        throw new Error('Wordle response contains non-string entries');
+      const repaired = this.repairWordleWords(words);
+      if (repaired.length < 8) {
+        throw new Error(`Only ${repaired.length} valid 5-letter words returned (need at least 8)`);
       }
-      return words;
+      return repaired;
     } catch (error) {
       console.error('[ContentGenerator] Failed to parse Wordle JSON:', error);
       console.error('[ContentGenerator] Full response:', response);
@@ -135,21 +198,10 @@ No explanations, just the JSON array.`;
     }
   },
 
-  // Generate Memory game content (12 pairs for each of 5 topics)
-  async generateMemoryContent(language, difficulty, settings) {
-    const topics = ['food', 'daily', 'family', 'school', 'work'];
-    const topicNames = {
-      food: 'Food and Drink',
-      daily: 'Daily Activities',
-      family: 'Family Members',
-      school: 'School and Education',
-      work: 'Work and Career'
-    };
-
-    const memoryContent = {};
-
-    for (const topic of topics) {
-      const prompt = `Generate exactly 12 word pairs for a memory matching game. The topic is "${topicNames[topic]}".
+  // Generate Memory game content for ONE topic (12 pairs requested, ≥8 valid required)
+  async generateMemoryTopic(topic, language, difficulty, settings) {
+    const topicName = this.MEMORY_TOPICS[topic];
+    const prompt = `Generate exactly 12 word pairs for a memory matching game. The topic is "${topicName}".
 
 Requirements:
 - Target language: ${language}
@@ -159,7 +211,7 @@ Requirements:
 - Use SINGLE WORDS only - no phrases with spaces (e.g., use "homework" not "home work", "breakfast" not "have breakfast")
 - If a concept requires multiple words, choose a simpler single-word alternative
 - Choose vocabulary appropriate for ${difficulty} level learners
-- Words should be relevant to the "${topicNames[topic]}" topic
+- Words should be relevant to the "${topicName}" topic
 - Prefer shorter, concise vocabulary that fits well on cards
 
 Examples of good word pairs:
@@ -179,35 +231,30 @@ Return ONLY a JSON array of objects in this exact format:
 
 Return exactly 12 pairs. No explanations, just the JSON array.`;
 
-      const response = await this.callLLM(prompt, settings, 1000);
-      console.log(`[ContentGenerator] Memory ${topic} response length:`, response.length);
-      console.log(`[ContentGenerator] Memory ${topic} response preview:`, response.substring(0, 200));
+    const response = await this.callLLM(prompt, settings, 1000);
 
-      try {
-        const parsed = JSON.parse(response);
-        if (!Array.isArray(parsed) || parsed.length === 0) {
-          throw new Error('Expected an array of word pairs');
-        }
-
-        // Normalize the key name to match expected format (e.g., "italian" for Italian)
-        const langKey = Object.keys(parsed[0]).find(k => k !== 'english');
-        if (!langKey) {
-          throw new Error('Word pairs missing language key');
-        }
-        memoryContent[topic] = parsed.map(item => {
-          if (!item[langKey] || !item.english) {
-            throw new Error('Word pair missing required fields');
-          }
-          return { word: item[langKey], english: item.english };
-        });
-      } catch (error) {
-        console.error(`[ContentGenerator] Failed to parse Memory ${topic} JSON:`, error);
-        console.error('[ContentGenerator] Full response:', response);
-        throw new Error(`Failed to parse Memory ${topic} content: ${error.message}`);
+    try {
+      const parsed = JSON.parse(response);
+      if (!Array.isArray(parsed) || parsed.length === 0) {
+        throw new Error('Expected an array of word pairs');
       }
+      const langKey = Object.keys(parsed[0]).find(k => k !== 'english');
+      if (!langKey) {
+        throw new Error('Word pairs missing language key');
+      }
+      const mapped = parsed
+        .filter(item => item && item[langKey] && item.english)
+        .map(item => ({ word: item[langKey], english: item.english }));
+      const repaired = this.repairMemoryPairs(mapped);
+      if (repaired.length < 8) {
+        throw new Error(`Only ${repaired.length} valid pairs (need at least 8)`);
+      }
+      return repaired;
+    } catch (error) {
+      console.error(`[ContentGenerator] Failed to parse Memory ${topic} JSON:`, error);
+      console.error('[ContentGenerator] Full response:', response);
+      throw new Error(`Failed to parse Memory ${topic} content: ${error.message}`);
     }
-
-    return memoryContent;
   },
 
   // Generate verb tenses (20 regular verbs)
@@ -241,20 +288,17 @@ Return ONLY a JSON array of objects in this exact format:
 Return exactly 20 verbs. Adapt the pronoun keys to ${language} if different from Italian. No explanations, just the JSON array.`;
 
     const response = await this.callLLM(prompt, settings, 6000);
-    console.log('[ContentGenerator] Verb tenses response length:', response.length);
-    console.log('[ContentGenerator] Verb tenses response preview:', response.substring(0, 200));
 
     try {
       const verbs = JSON.parse(response);
       if (!Array.isArray(verbs) || verbs.length === 0) {
         throw new Error('Expected an array of verb objects');
       }
-      for (const verb of verbs) {
-        if (!verb.infinitive || !verb.english || !verb.conjugations) {
-          throw new Error('Verb entry missing required fields (infinitive, english, conjugations)');
-        }
+      const repaired = this.repairVerbs(verbs);
+      if (repaired.length < 10) {
+        throw new Error(`Only ${repaired.length} valid verbs returned (need at least 10)`);
       }
-      return verbs;
+      return repaired;
     } catch (error) {
       console.error('[ContentGenerator] Failed to parse verb tenses JSON:', error);
       console.error('[ContentGenerator] Full response:', response);
@@ -301,20 +345,17 @@ Return ONLY a JSON array of objects in this exact format:
 Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from Italian. No explanations, just the JSON array.`;
 
     const response = await this.callLLM(prompt, settings, 5000);
-    console.log('[ContentGenerator] Reflexive verbs response length:', response.length);
-    console.log('[ContentGenerator] Reflexive verbs response preview:', response.substring(0, 200));
 
     try {
       const verbs = JSON.parse(response);
       if (!Array.isArray(verbs) || verbs.length === 0) {
         throw new Error('Expected an array of reflexive verb objects');
       }
-      for (const verb of verbs) {
-        if (!verb.infinitive || !verb.english || !verb.conjugations) {
-          throw new Error('Reflexive verb entry missing required fields (infinitive, english, conjugations)');
-        }
+      const repaired = this.repairVerbs(verbs);
+      if (repaired.length < 8) {
+        throw new Error(`Only ${repaired.length} valid reflexive verbs returned (need at least 8)`);
       }
-      return verbs;
+      return repaired;
     } catch (error) {
       console.error('[ContentGenerator] Failed to parse reflexive verbs JSON:', error);
       console.error('[ContentGenerator] Full response:', response);
@@ -324,8 +365,6 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
 
   // Call LLM API
   async callLLM(prompt, settings, maxTokens = 4000) {
-    console.log('[ContentGenerator] Making API call to:', settings.provider, settings.model);
-    console.log('[ContentGenerator] Max tokens:', maxTokens);
 
     const headers = {
       'Content-Type': 'application/json'
@@ -357,7 +396,6 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
     };
 
     try {
-      console.log('[ContentGenerator] Sending request...');
 
       const response = await fetch(settings.endpoint, {
         method: 'POST',
@@ -365,7 +403,6 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
         body: JSON.stringify(requestBody)
       });
 
-      console.log('[ContentGenerator] Response status:', response.status);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -386,24 +423,18 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
       }
 
       const data = await response.json();
-      console.log('[ContentGenerator] Response received');
-      console.log('[ContentGenerator] Response data structure:', Object.keys(data));
 
       // Extract content from response (format varies by provider)
       let content;
       if (data.choices && data.choices[0] && data.choices[0].message) {
         content = data.choices[0].message.content;
-        console.log('[ContentGenerator] Using choices[0].message.content path');
       } else if (data.message && data.message.content) {
         content = data.message.content;
-        console.log('[ContentGenerator] Using message.content path');
       } else {
         console.error('[ContentGenerator] Unexpected response format:', data);
         throw new Error('Unexpected API response format');
       }
 
-      console.log('[ContentGenerator] Raw content length:', content ? content.length : 0);
-      console.log('[ContentGenerator] Raw content type:', typeof content);
 
       if (!content) {
         console.error('[ContentGenerator] Content is empty or null');
@@ -412,17 +443,13 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
 
       // Clean up response - remove markdown code blocks if present
       content = content.trim();
-      console.log('[ContentGenerator] Content after trim:', content.length);
 
       if (content.startsWith('```json')) {
         content = content.replace(/```json\n?/, '').replace(/```\s*$/, '');
-        console.log('[ContentGenerator] Removed ```json markers');
       } else if (content.startsWith('```')) {
         content = content.replace(/```\n?/, '').replace(/```\s*$/, '');
-        console.log('[ContentGenerator] Removed ``` markers');
       }
 
-      console.log('[ContentGenerator] Content extracted successfully, final length:', content.trim().length);
       return content.trim();
 
     } catch (error) {
