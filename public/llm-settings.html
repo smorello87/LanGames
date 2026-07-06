@@ -208,8 +208,14 @@
           Generate Content
         </button>
         <p style="color: var(--text-muted); font-size: 14px; margin-top: var(--spacing-md);">
-          This will take 2-5 minutes and use API credits. Any existing content will be replaced.
+          This usually takes under a minute and uses API credits. Any existing content will be replaced.
         </p>
+      </div>
+
+      <!-- Partial failure notice -->
+      <div id="partialFailureBox" class="alert alert-warning" aria-live="polite" style="display: none; margin-top: var(--spacing-lg);">
+        <p id="partialFailureText" style="margin: 0 0 var(--spacing-sm) 0;"></p>
+        <button type="button" class="btn-primary" onclick="retryFailedSections()">Retry failed sections</button>
       </div>
     </section>
 
@@ -217,7 +223,7 @@
     <div class="modal-overlay" id="progressModal" role="dialog" aria-modal="true" aria-labelledby="progressModalTitle">
       <div class="modal-content">
         <h3 id="progressModalTitle" style="text-align: center; margin-top: 0;">Generating Content</h3>
-        <p style="text-align: center; color: var(--text-muted);">Please wait while we create your custom learning materials...</p>
+        <p style="text-align: center; color: var(--text-muted);">Your custom learning materials are being created — all game sections generate at once.</p>
 
         <div class="progress-bar">
           <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
@@ -349,6 +355,7 @@
     let selectedLanguage = null;
     let selectedDifficulty = null;
     let currentProvider = 'openrouter';
+    let failedSections = [];
 
     // Initialize page on load
     window.addEventListener('DOMContentLoaded', () => {
@@ -569,43 +576,103 @@
 
       const confirmed = confirm(
         `Generate new content for ${selectedLanguage} (${selectedDifficulty} level)?\n\n` +
-        `This will take several minutes and use API credits.\n` +
+        `This usually takes under a minute and uses API credits.\n` +
         `Any existing content will be replaced.`
       );
 
       if (!confirmed) return;
 
-      // Show progress modal
       const modal = document.getElementById('progressModal');
       modal.classList.add('active');
-
-      // Progress callback
-      const updateProgress = (message, percent) => {
-        document.getElementById('progressFill').style.width = percent + '%';
-        document.getElementById('progressText').textContent = message;
-      };
+      updateProgress('Contacting the AI model…', 0);
 
       try {
-        const content = await ContentGenerator.generateAllContent(
+        const { content, failed } = await ContentGenerator.generateAllContent(
           selectedLanguage,
           selectedDifficulty,
           updateProgress
         );
 
-        const saved = GameContentLoader.saveContent(content);
+        modal.classList.remove('active');
 
-        if (!saved) {
+        if (failed.length === ContentGenerator.SECTION_KEYS.length) {
+          showAlert('error', `Content generation failed: ${failed[0].error}`);
+          return;
+        }
+
+        if (!GameContentLoader.saveContent(content)) {
           throw new Error('Failed to save content to localStorage');
         }
 
-        modal.classList.remove('active');
-        showAlert('success', 'Content generated successfully! Content ready! Choose a game from the navigation menu.');
+        if (failed.length > 0) {
+          showPartialFailure(failed);
+        } else {
+          hidePartialFailure();
+          showAlert('success', 'Content generated successfully! Choose a game from the navigation menu.');
+        }
         checkExistingContent();
 
       } catch (error) {
         modal.classList.remove('active');
-        const errorMessage = error.message || 'Unknown error occurred';
-        showAlert('error', `Content generation failed: ${errorMessage}`);
+        showAlert('error', `Content generation failed: ${error.message || 'Unknown error occurred'}`);
+      }
+    }
+
+    function updateProgress(message, percent) {
+      document.getElementById('progressFill').style.width = percent + '%';
+      document.getElementById('progressText').textContent = message;
+    }
+
+    function showPartialFailure(failed) {
+      failedSections = failed.map(f => f.key);
+      const labels = failed.map(f => ContentGenerator.sectionLabel(f.key)).join(', ');
+      document.getElementById('partialFailureText').textContent =
+        `Generated ${ContentGenerator.SECTION_KEYS.length - failed.length} of ${ContentGenerator.SECTION_KEYS.length} sections. ` +
+        `Could not generate: ${labels}. The other games are ready to play.`;
+      document.getElementById('partialFailureBox').style.display = 'block';
+    }
+
+    function hidePartialFailure() {
+      failedSections = [];
+      document.getElementById('partialFailureBox').style.display = 'none';
+    }
+
+    async function retryFailedSections() {
+      if (!verifyModules() || failedSections.length === 0) return;
+
+      const content = GameContentLoader.loadContent();
+      if (!content) {
+        showAlert('error', 'No stored content found. Please generate content first.');
+        return;
+      }
+
+      const modal = document.getElementById('progressModal');
+      modal.classList.add('active');
+      updateProgress('Retrying failed sections…', 0);
+
+      try {
+        const { sections, failed } = await ContentGenerator.generateSections(
+          failedSections, content.language, content.difficulty, updateProgress
+        );
+
+        ContentGenerator.applySections(content, sections);
+        if (!GameContentLoader.saveContent(content)) {
+          throw new Error('Failed to save content to localStorage');
+        }
+
+        modal.classList.remove('active');
+
+        if (failed.length > 0) {
+          showPartialFailure(failed);
+          showAlert('warning', 'Some sections still failed. You can retry again.');
+        } else {
+          hidePartialFailure();
+          showAlert('success', 'All sections generated! Choose a game from the navigation menu.');
+        }
+        checkExistingContent();
+      } catch (error) {
+        modal.classList.remove('active');
+        showAlert('error', `Retry failed: ${error.message}`);
       }
     }
 
