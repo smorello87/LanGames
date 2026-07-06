@@ -61,13 +61,6 @@ const LLMConfig = {
 
   // Test API connection
   async testConnection(settings) {
-    console.log('[LLMConfig] Testing connection with settings:', {
-      provider: settings.provider,
-      endpoint: settings.endpoint,
-      model: settings.model,
-      apiKey: settings.apiKey ? '[SET]' : '[MISSING]'
-    });
-
     try {
       const headers = {
         'Content-Type': 'application/json'
@@ -82,8 +75,6 @@ const LLMConfig = {
         headers['Authorization'] = `Bearer ${settings.apiKey}`;
       }
 
-      console.log('[LLMConfig] Request headers:', Object.keys(headers));
-
       const requestBody = {
         model: settings.model,
         messages: [
@@ -92,15 +83,11 @@ const LLMConfig = {
         max_tokens: 10
       };
 
-      console.log('[LLMConfig] Sending test request...');
-
       const response = await fetch(settings.endpoint, {
         method: 'POST',
         headers: headers,
         body: JSON.stringify(requestBody)
       });
-
-      console.log('[LLMConfig] Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -119,7 +106,6 @@ const LLMConfig = {
       }
 
       const data = await response.json();
-      console.log('[LLMConfig] Test successful!', data);
 
       return {
         success: true,
