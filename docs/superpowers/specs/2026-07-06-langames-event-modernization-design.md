@@ -67,7 +67,8 @@ Keep the ASR blue/teal identity and the existing CSS v3 file structure, z-index 
 ## 6. Cleanup
 
 - Delete unused files: `js/game-content-loader.js`, `js/game-content-loader-v4.js` (repo), `test-url-length.js` (PHP folder).
-- Delete dead LZW/LZString code paths in `js/gcl-1761141656.js` (LZString is never loaded on any page).
+- Delete the dead hand-rolled LZW methods (`_compress`, `_decompress`, `_lzwCompress`, `_lzwDecompress`) in `js/gcl-1761141656.js` — nothing calls them. The LZString CDN library stays: it is loaded on all pages and used for the `#content=` fragment fallback.
+- Delete unused CSS versions (`styles-v2.css`, `games-v2.css`, `adaptive-v1.css`, `adaptive-v2.css`) from both codebases — all HTML links v3 only.
 - Strip debug `console.log`s; keep `console.error` / `console.warn`.
 - Fix rate-limit ordering in both backends: validate the request before incrementing the counter.
 - Update both CLAUDE.md files to reflect reality: two live deployments, primary is stefanomorello.com/langames, shortener removed, current file list.
