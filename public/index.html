@@ -331,7 +331,7 @@
             <span class="faq-arrow" aria-hidden="true">▼</span>
           </button>
           <div class="faq-answer">
-            <p>Typically 2-5 minutes to generate a complete set of content (all games, all topics). This includes making multiple API calls to generate vocabulary, verb conjugations, and game content.</p>
+            <p>Usually under a minute. All game sections (vocabulary, verb conjugations, and game content) are generated concurrently in a single batch of API calls.</p>
           </div>
         </div>
 
@@ -390,13 +390,13 @@
         const loaded = await GameContentLoader.initFromURLAsync();
         if (loaded) {
           // Show success message
-          const heroSection = document.querySelector('.hero-section');
-          if (heroSection) {
+          const mainContent = document.getElementById('main-content');
+          if (mainContent) {
             const alert = document.createElement('div');
             alert.className = 'alert alert-success';
             alert.style.marginTop = 'var(--spacing-lg)';
             alert.innerHTML = '<strong>✅ Content Loaded!</strong> Shared content has been loaded successfully. You can now play any of the games!';
-            heroSection.appendChild(alert);
+            mainContent.insertBefore(alert, mainContent.firstChild);
           }
         }
       }

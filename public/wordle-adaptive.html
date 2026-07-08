@@ -150,7 +150,6 @@
       const content = GameContentLoader.loadContent();
       if (content && content.wordle && content.wordle.length > 0) {
         customWords = content.wordle;
-        console.log('Custom content loaded successfully:', customWords.length, 'words');
       } else {
         // No fallback - redirect to settings
         alert('No content available. Please go to Settings and generate content first.');
@@ -188,7 +187,6 @@
 
       const randomIndex = Math.floor(Math.random() * customWords.length);
       targetWord = customWords[randomIndex].toUpperCase();
-      console.log("Target Word:", targetWord);
     }
 
     function initBoard() {
