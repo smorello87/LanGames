@@ -4,43 +4,66 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-**LanGames** is an AI-powered multilingual language learning platform that generates custom educational content for 10 languages using LLM APIs. This is a standalone static web application with no build process or backend dependencies.
+**LanGames** is an AI-powered multilingual language learning platform that generates custom educational content for 10 languages using LLM APIs.
 
-**Key Distinction**: This is the `llm-version/` folder which is completely independent from the parent `impariamo/` project. The parent project contains hardcoded Italian games, while LanGames generates dynamic content via AI for any supported language.
+**Key Distinction**: This is the `llm-version/` lineage, completely independent from the parent `impariamo/` project. The parent project contains hardcoded Italian games, while LanGames generates dynamic content via AI for any supported language.
+
+### Two Live Deployments (both must stay in sync)
+
+| Deployment | Stack | Source | Deploy method |
+|---|---|---|---|
+| **PRIMARY** — `https://stefanomorello.com/langames` (presented at events) | PHP on Apache shared hosting | `../LanGames-php/` (sibling folder, now git-tracked) | Manual upload |
+| `https://langames.cuny.qzz.io` | Cloudflare Workers, Hono/TypeScript (`src/index.ts`) | this repo (`LanGames/`) | Auto-deploy on push to `main` |
+
+The two frontends are near-identical; the only differences are the API endpoint calls (`store-content.php`/`get-content.php` vs `/api/store-content`/`/api/get-content`) and, historically, the model list. When updating shared frontend behavior (games, generation prompts, share flow), check whether the change needs to be ported to `../LanGames-php/` as well.
 
 ## Architecture
 
 ### Technology Stack
 - **Frontend**: Pure HTML5, CSS3, Vanilla JavaScript (no frameworks)
-- **Storage**: Browser localStorage for settings and generated content
+- **Backend (this repo)**: Cloudflare Workers via Hono (TypeScript), `src/index.ts`. Serves static assets from `public/` and exposes a small JSON API backed by Workers KV.
+- **Storage**: Browser localStorage for settings and generated content; Workers KV (this repo) or server-side file storage (PHP deployment) for shared content behind short URLs.
 - **AI Integration**: OpenRouter or Open Web UI APIs for content generation
-- **Hosting**: Static files - works on any web server or locally
+- **Hosting**: This repo deploys as a Cloudflare Worker (see `wrangler.jsonc`); the PHP deployment runs on any Apache/PHP shared host.
+
+### API Routes (this repo, `src/index.ts`)
+
+| Route | Purpose |
+|---|---|
+| `GET /api/health` | Health check |
+| `POST /api/store-content` | Store generated content in KV, return a short `?id=` share URL |
+| `GET /api/get-content` | Fetch stored content by `id` |
+
+**Note**: `POST /api/shorten-url` was removed (July 2026) along with the external URL-shortener chain (TinyURL/is.gd/v.gd/Clck.ru/da.gd) and `shorten-url.php`. Sharing now only uses server-side storage (above) or the URL-fragment fallback — see "URL-Based Content Sharing" below.
 
 ### File Structure
 
 ```
-llm-version/
-├── index.html                    # Landing page with features/FAQ
-├── llm-settings.html             # API config + content generation (merged hub)
-├── wordle-adaptive.html          # 5-letter word guessing game
-├── memory-adaptive.html          # Vocabulary matching game
-├── fiore-adaptive.html           # Flower word guessing game (petal-based learning)
-├── tenses-adaptive.html          # Verb conjugation wheel (present tense)
-├── reflexives-adaptive.html      # Reflexive verb conjugation wheel
-├── css/
-│   ├── styles-v3.css            # Base styles, navigation, z-index hierarchy
-│   ├── games-v3.css             # Game-specific styles (cards, tiles, canvas)
-│   └── adaptive-v3.css          # LanGames-specific styles (FAQ, selections)
-├── js/
-│   ├── llm-config.js            # API settings storage/validation
-│   ├── content-generator.js     # LLM API calls and content generation
-│   └── gcl-1761141656.js        # Game content loader (localStorage, URL sharing)
-├── flower/                       # Flower images (flower0.jpg - flower8.jpg)
-├── shorten-url.php               # PHP proxy for URL shortening (bypasses CORS)
-├── tests/                        # Development test files (gitignored, not deployed)
-└── docs/
-    └── README.md                # Complete documentation
+LanGames/
+├── src/
+│   └── index.ts                  # Hono app: static asset serving + /api/* routes
+├── public/                       # Deployed as Worker static assets
+│   ├── index.html                # Landing page with features/FAQ
+│   ├── llm-settings.html         # API config + content generation (merged hub)
+│   ├── wordle-adaptive.html      # 5-letter word guessing game
+│   ├── memory-adaptive.html      # Vocabulary matching game
+│   ├── fiore-adaptive.html       # Flower word guessing game (petal-based learning)
+│   ├── tenses-adaptive.html      # Verb conjugation wheel (present tense)
+│   ├── reflexives-adaptive.html  # Reflexive verb conjugation wheel
+│   ├── css/
+│   │   ├── styles-v3.css        # Base styles, navigation, z-index hierarchy
+│   │   ├── games-v3.css         # Game-specific styles (cards, tiles, canvas)
+│   │   └── adaptive-v3.css      # LanGames-specific styles (FAQ, selections)
+│   ├── js/
+│   │   ├── llm-config.js        # API settings storage/validation
+│   │   ├── content-generator.js # LLM API calls and content generation
+│   │   └── gcl-1761141656.js    # Game content loader (localStorage, URL sharing)
+│   └── flower/                   # Flower images (flower0.jpg - flower8.jpg)
+├── wrangler.jsonc                 # Worker config (assets dir, KV binding)
+└── tests/                        # Development test files (gitignored, not deployed)
 ```
+
+**Removed from `public/`**: `js/game-content-loader.js`, `js/game-content-loader-v4.js`, `css/styles-v2.css`, `css/games-v2.css`, `css/adaptive-v1.css`, `css/adaptive-v2.css`. Verify current contents with `ls public/js public/css` before assuming a file exists. (A `shorten-url.php` file still sits at the repo root as a dead leftover — it is not in `public/`, not deployed by the Worker, and not referenced by any current frontend code.)
 
 **Note**: The `tests/` folder contains development test files and is excluded from deployment via `.gitignore`.
 
@@ -80,102 +103,59 @@ All these MUST be defined in styles-v3.css for games to work properly:
 ### Content Generation Flow
 1. User configures API settings in `llm-settings.html` (Section 1)
 2. User selects language + difficulty (Section 2)
-3. `ContentGenerator.generateAllContent()` makes 4 API calls:
-   - 15 Wordle words (5-letter)
-   - 60 Memory pairs (5 topics × 12 pairs)
-   - 20 Regular verbs with conjugations
-   - 15 Reflexive verbs with conjugations
-4. Content saved to `localStorage` key `game-content`
-5. Games load content via `GameContentLoader.loadContent()`
+3. `ContentGenerator.generateAllContent(language, difficulty, progressCallback)` fires **8 sections concurrently** via `Promise.allSettled` (see `SECTION_KEYS` in `content-generator.js`):
+   - 1 Wordle section (15 5-letter words)
+   - 5 Memory sections, one per topic (`food`, `daily`, `family`, `school`, `work` — 12 pairs each, 60 total)
+   - 1 Verb tenses section (20 regular verbs with conjugations)
+   - 1 Reflexive verbs section (15 reflexive verbs with conjugations)
+   - Each section gets **one automatic retry** if its first API call fails; progress is reported as sections settle (`"${done} of 8 sections complete"`)
+   - Returns `{ content, failed }` — `content` holds every section that succeeded (partial content is usable), `failed` is an array of `{ key, error }` for sections that failed twice
+4. On partial failure, `llm-settings.html` lets the user retry just the failed sections (re-running `generateSections()` with only the failed keys) instead of regenerating everything
+5. Content saved to `localStorage` key `game-content`
+6. Games load content via `GameContentLoader.loadContent()`
 
 ### localStorage Keys
 - `llm-settings`: API configuration (provider, endpoint, key, model)
 - `game-content`: Generated content (language, difficulty, all game data)
 
-### URL-Based Content Sharing with Automatic Shortening
+### URL-Based Content Sharing (Two Paths Only)
 **For Teachers**: Share generated content with students via URL - no API key required for students!
 
-**How it works:**
+Sharing has exactly two paths — there is no external URL-shortening service involved:
+
+1. **Server storage (primary)**: `GameContentLoader.storeContentOnServer()` POSTs the generated content to `/api/store-content` (this repo's Worker, backed by Workers KV) or `store-content.php` (PHP deployment). The server returns a short `?id=<id>` URL. Retrieval is `GET /api/get-content?id=...` or `get-content.php`.
+2. **Fragment fallback**: If server storage fails (or is unavailable), the content is encoded client-side and appended as a URL fragment: `#content=<encoded-json>`. This still uses the LZString library (loaded from a CDN in `llm-settings.html`) to compress the JSON before Base64/URI-encoding it, keeping fragment URLs as short as practical without a server round-trip.
+
+**How it works (teacher side):**
 1. Teacher generates content in `llm-settings.html`
 2. Click "🔗 Share Link" button
-3. Modal shows progress bar while automatically shortening URL via server
-4. Wait 2-3 seconds → Short URL appears (e.g., `https://is.gd/abc123`)
-5. Copy and share the short link with students
+3. Modal shows a progress state while the app attempts server storage
+4. Modal shows the result state: a short `?id=` URL on success, or a long `#content=` URL if server storage failed
+5. Copy and share the link with students
 6. Students click the link → content automatically loads into their browser
 7. Students can play all 5 games without needing an API key!
 
 **Technical Details:**
-- Content is Base64-encoded: `#content=<base64-encoded-json>`
-- **CRITICAL: Uses URL fragment (`#`) not query parameter (`?`)** to bypass Apache "Request-URI Too Long" errors
+- Server storage returns a short URL (`?id=<id>`), no client-side encoding needed for that path
+- Fragment fallback: content is LZString-compressed then encoded, appended after `#content=` (NOT a query parameter `?`), to bypass Apache "Request-URI Too Long" errors
   - Fragments are NOT sent to server, only processed by browser JavaScript
-  - This allows ~13k character URLs to work without server rejection
-- Uses URL-safe Base64 encoding (replaces +/= with -_)
-- Typical URL length: ~12,700 characters (9,500 JSON → base64 expansion ~133%)
-- **Automatic URL Shortening**: PHP proxy on server bypasses CORS restrictions
-  - JavaScript calls `shorten-url.php` on your server
-  - PHP makes server-to-server API calls (no CORS)
-  - Tries multiple free services: is.gd (primary), v.gd, Clck.ru, dagd
-  - Final short URL is typically 20-30 characters
-  - No deprecated APIs - all services are actively maintained (as of 2025)
-- URL automatically parsed on page load via `GameContentLoader.initFromURLAsync()`
+  - Legacy plain-Base64 fragments (no LZString prefix) are still decodable for backward compatibility with old share links
+- URL automatically parsed on page load via `GameContentLoader.initFromURLAsync()` (checks `?id=` first, then `#content=`)
 - Content is saved to student's localStorage for persistent access
 - URL fragment is removed from browser history for clean URLs
 
-**Files Updated:**
-- **`shorten-url.php`** (NEW): PHP proxy for URL shortening, bypasses CORS
-- `js/gcl-1761141656.js`: Updated `shortenURL()` to call PHP proxy instead of APIs directly
-- `llm-settings.html`: Automatic shortening workflow in modal
-- `index.html`: Checks for URL content on landing page
-- All game files: Call `GameContentLoader.initFromURLAsync()` on page load
-- `css/adaptive-v3.css`: Modal and button styles for share UI
-- `css/styles-v3.css`: Added `--color-orange` variable
-
-**Share Modal UI (Three-State Design):**
-1. **Progress State**: Animated progress bar with gradient while shortening URL
-2. **Success State**: Shows shortened URL with copy button and instructions
-3. **Fallback State**: Shows long URL if shortening fails (service unavailable)
+**Share Modal UI (Two-State Design):**
+1. **Progress State**: Shown while `storeContentOnServer()` is attempted
+2. **Result State**: Shows the resulting URL (short `?id=` on success, long `#content=` fragment on fallback) with a copy button and instructions
 
 **Security Note:**
 - API keys are NEVER included in share URLs - only generated content is shared
 - Warning in UI advises users not to generate content on shared/public computers
 - API configuration stays private in each user's browser localStorage
-- PHP endpoints use origin-based CORS allowlist (not wildcard `*`)
-- `store-content.php` has IP-based rate limiting (10 stores/hour)
-- `shorten-url.php` blocks SSRF (private IPs, non-http schemes, no redirect following)
-- Share URLs use hardcoded canonical base URL to prevent Host header injection
+- `/api/store-content` (Worker) and `store-content.php` (PHP) validate the request body and rate-limit stores (IP-based, 10/hour) before consuming the limit
+- Share URLs use a hardcoded canonical base URL to prevent Host header injection
 - All user-facing text uses `textContent` (not `innerHTML`) to prevent XSS
 - API key prefix is NOT logged to browser console
-
-**PHP Proxy Architecture:**
-```
-Browser → PHP Proxy → URL Shortener API
-(CORS OK)  (No CORS)  (Returns short URL)
-```
-
-**Why This Works:**
-- Browser can call PHP on same domain (no CORS)
-- PHP can call external APIs server-to-server (no CORS)
-- Uses cURL with 10-second timeout and fallback services
-- Handles errors gracefully - falls back to long URL if all services fail
-
-**Encoding Implementation:**
-```javascript
-// Simple Base64 encoding (no compression)
-const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
-  .replace(/\+/g, '-')
-  .replace(/\//g, '_')
-  .replace(/=+$/, '');
-```
-
-**Why Simple Base64 Encoding:**
-- Previous LZW compression attempts failed due to JavaScript's UTF-16 string handling
-- Simple Base64 is reliable and works with all Unicode (Cyrillic, CJK, Arabic)
-- Server-side URL shortening reduces final URL to ~20-30 chars regardless of encoding
-
-**Deployment Requirements:**
-- PHP 7.4+ with `curl` and `json` extensions
-- Upload `shorten-url.php` to server root alongside HTML files
-- See `DEPLOYMENT.md` for complete instructions
 
 **Alternative Methods:**
 - **Export/Import**: Download JSON file for manual sharing (no URL length limits)
@@ -189,19 +169,25 @@ const base64 = btoa(unescape(encodeURIComponent(jsonStr)))
 
 ## Development Commands
 
+This repo (Cloudflare Workers / Hono):
+
 ```bash
-# Start PHP development server (RECOMMENDED - supports URL shortening)
-php -S localhost:8765
-# Navigate to http://localhost:8765/
+# Install dependencies
+npm install
 
-# Alternative: Python server (URL shortening won't work)
-python3 -m http.server 8765
-# Navigate to http://localhost:8765/
+# Start local Worker dev server (serves public/ + /api/* routes, needs a KV binding)
+npm run dev
+# Navigate to the URL wrangler prints (typically http://localhost:8787/)
 
-# Test URL shortening locally (requires PHP server)
-curl -X POST http://localhost:8765/shorten-url.php \
-  -H "Content-Type: application/json" \
-  -d '{"url":"https://example.com"}'
+# Type-check
+npm run check
+
+# Deploy manually (normally handled by auto-deploy on push to main)
+npm run deploy
+
+# Test the API routes locally
+curl -s http://localhost:8787/api/health
+curl -X POST http://localhost:8787/api/store-content -H "Content-Type: application/json" -d '{"...":"..."}'
 
 # Clear generated content (browser console)
 localStorage.removeItem('game-content')
@@ -213,10 +199,7 @@ localStorage.removeItem('llm-settings')
 localStorage.clear()
 ```
 
-**Important**:
-- Use PHP server for full functionality including URL shortening
-- Python server works but share link button will fall back to long URLs
-- The JS automatically detects localhost and uses `/shorten-url.php` relative path
+For the PHP deployment (`../LanGames-php/`), use a local PHP server (`php -S localhost:8765`) to exercise `store-content.php`/`get-content.php`; a plain static server (e.g. `python3 -m http.server`) works for everything except that server-storage share path.
 
 ## Key Implementation Details
 
@@ -232,7 +215,7 @@ All HTML files link to CSS v3:
 ```
 
 **When updating CSS:**
-1. Modify files in `llm-version/css/` (v3 files)
+1. Modify files in `public/css/` (v3 files)
 2. If making major changes, increment version (v3 → v4) and update ALL 7 HTML files
 3. Test contrast ratios: Minimum 4.5:1 for WCAG AA compliance
 4. Verify navigation z-index remains highest (150)
@@ -624,8 +607,8 @@ This prevents malformed LLM output from breaking games with confusing error stat
 **Cause**: URL encoding issues with special characters (Cyrillic, CJK, Arabic)
 **Fix**: System uses `encodeURIComponent()` + Base64 which handles all Unicode correctly - if issues persist, check browser console for errors
 
-**Cause**: URL shortening service fails (503 error)
-**Fix**: System automatically falls back to long URL. PHP proxy tries multiple services (is.gd, v.gd, Clck.ru, dagd) - at least one should work.
+**Cause**: Server storage fails (KV/PHP storage unavailable, network error)
+**Fix**: `storeContentOnServer()` catches the failure and returns `null`; the share flow automatically falls back to the long `#content=` fragment URL instead.
 
 ### Share Link Modal Not Appearing
 **Cause**: Modal CSS not loaded or display property not set correctly
@@ -665,11 +648,27 @@ Italian, Spanish, French, German, Portuguese, Japanese, Chinese, Korean, Russian
 2. Update subject pronouns mapping in verb wheel game files
 3. Test content generation with your API provider
 
+## Current Model List
+
+The OpenRouter model dropdown in `llm-settings.html` offers (default marked):
+
+- `google/gemini-3.1-flash-lite` — **default**, fast and inexpensive, recommended for live generation
+- `google/gemini-3.5-flash`
+- `anthropic/claude-haiku-4.5`
+- `anthropic/claude-sonnet-5`
+- `openai/gpt-5.4-mini`
+- `openai/gpt-5.4`
+- `meta-llama/llama-3.3-70b-instruct`
+
+Stale model IDs no longer offered anywhere in the app: `openai/gpt-4`, `anthropic/claude-3.5-sonnet`, `google/gemini-pro`, `meta-llama/llama-3-70b-instruct`, `google/gemini-3.1-flash-lite-preview`. If you see any of these in code or docs, they're leftover and should be updated to the current list above.
+
 ## API Cost Estimates
 
-- OpenRouter + GPT-3.5-turbo: ~$0.05-$0.10 per full content generation
-- OpenRouter + Claude: ~$0.15-$0.25 per generation
-- OpenRouter + GPT-4: ~$0.30-$0.50 per generation
+- OpenRouter + Gemini 3.1 Flash Lite (default) or GPT-5.4 Mini / Claude Haiku 4.5: cheapest tier, well suited to live-event generation
+- OpenRouter + Claude Sonnet 5, GPT-5.4, or Gemini 3.5 Flash: mid-tier cost, higher quality
+- OpenRouter + Llama 3.3 70B: varies by provider
 - Open Web UI (self-hosted): Free
 
-One generation creates content for all 5 games (15 words, 60 pairs, 35 verbs).
+Check current per-token pricing on OpenRouter before quoting exact dollar figures — rates change frequently and the stale `$0.05-$0.50` figures previously here no longer correspond to the current model list.
+
+One generation now runs 8 concurrent sections creating content for all 5 games (15 Wordle words, 60 Memory pairs across 5 topics, 20 verb-tense verbs, 15 reflexive verbs).
