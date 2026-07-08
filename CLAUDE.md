@@ -63,7 +63,7 @@ LanGames/
 └── tests/                        # Development test files (gitignored, not deployed)
 ```
 
-**Removed from `public/`**: `js/game-content-loader.js`, `js/game-content-loader-v4.js`, `css/styles-v2.css`, `css/games-v2.css`, `css/adaptive-v1.css`, `css/adaptive-v2.css`. Verify current contents with `ls public/js public/css` before assuming a file exists. (A `shorten-url.php` file still sits at the repo root as a dead leftover — it is not in `public/`, not deployed by the Worker, and not referenced by any current frontend code.)
+**Removed from `public/`**: `js/game-content-loader.js`, `js/game-content-loader-v4.js`, `css/styles-v2.css`, `css/games-v2.css`, `css/adaptive-v1.css`, `css/adaptive-v2.css`. Verify current contents with `ls public/js public/css` before assuming a file exists. (The legacy root-level `shorten-url.php`, `store-content.php`, and `get-content.php` — pre-Cloudflare leftovers, never served or executed by the Worker — were also removed; the Worker handles storage via KV in `src/index.ts`. The PHP deployment keeps its own copies of `store-content.php`/`get-content.php` in `../LanGames-php/`.)
 
 **Note**: The `tests/` folder contains development test files and is excluded from deployment via `.gitignore`.
 
