@@ -45,6 +45,9 @@ const ContentGenerator = {
     );
   },
 
+  // Words the Wordle game is given. The prompt asks for double (see generateWordleWords).
+  WORDLE_TARGET: 15,
+
   MEMORY_TOPICS: {
     food: 'Food and Drink',
     daily: 'Daily Activities',
@@ -67,8 +70,9 @@ const ContentGenerator = {
   },
 
   // Dispatch a single section to its generator
-  async generateSection(key, language, difficulty, settings) {
-    if (key === 'wordle') return this.generateWordleWords(language, difficulty, settings);
+  // options.retry marks the one automatic second attempt (see generateSections).
+  async generateSection(key, language, difficulty, settings, options = {}) {
+    if (key === 'wordle') return this.generateWordleWords(language, difficulty, settings, options);
     if (key === 'verbTenses') return this.generateVerbTenses(language, difficulty, settings);
     if (key === 'reflexiveVerbs') return this.generateReflexiveVerbs(language, difficulty, settings);
     if (key.startsWith('memory:')) return this.generateMemoryTopic(key.slice(7), language, difficulty, settings);
@@ -108,7 +112,7 @@ const ContentGenerator = {
         }
         console.warn(`Section ${key} failed, retrying once:`, firstError.message);
         try {
-          const value = await this.generateSection(key, language, difficulty, settings);
+          const value = await this.generateSection(key, language, difficulty, settings, { retry: true });
           report();
           return { key, value };
         } catch (secondError) {
@@ -163,8 +167,11 @@ const ContentGenerator = {
   },
 
   // Generate Wordle words (15 words per difficulty)
-  async generateWordleWords(language, difficulty, settings) {
-    const prompt = `Generate exactly 15 words in ${language} suitable for a ${difficulty} difficulty word game.
+  async generateWordleWords(language, difficulty, settings, options = {}) {
+    // Models count letters badly: measured on seven models, 5 to 15 of every 15
+    // words survived repairWordleWords. Ask for twice what the game needs and
+    // keep the first WORDLE_TARGET valid ones, rather than hope for compliance.
+    const prompt = `Generate ${this.WORDLE_TARGET * 2} words in ${language} suitable for a ${difficulty} difficulty word game. If you cannot find that many, return as many valid words as you can. Never return an error or an explanation instead of words.
 
 CRITICAL REQUIREMENT: Every single word MUST be exactly 5 letters long when written in ${language}. Count the letters carefully.
 
@@ -185,7 +192,13 @@ Return ONLY a JSON array of strings, like this:
 
 No explanations, just the JSON array.`;
 
-    const response = await this.callLLM(prompt, settings, 500);
+    // Counting letters is where models differ most, and no one setting suits
+    // them all. Measured on the CAIL catalog: with thinking off most models
+    // return a full valid list in seconds, but one gave 6 to 16 valid Russian
+    // words of 30; with thinking on that model gave 30 of 30, while three
+    // others ran out of room or timed out. So the first attempt is the cheap
+    // one, and only the automatic retry asks the model to think.
+    const response = await this.callLLM(prompt, settings, 500, { reasoning: options.retry === true });
 
     try {
       const words = JSON.parse(response);
@@ -196,7 +209,7 @@ No explanations, just the JSON array.`;
       if (repaired.length < 8) {
         throw new Error(`Only ${repaired.length} valid 5-letter words returned (need at least 8)`);
       }
-      return repaired;
+      return repaired.slice(0, this.WORDLE_TARGET);
     } catch (error) {
       console.error('[ContentGenerator] Failed to parse Wordle JSON:', error);
       console.error('[ContentGenerator] Full response:', response);
@@ -385,13 +398,13 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
 
   // Generate through the CUNY AI Lab deployment's own Worker. It holds no key:
   // the call is charged to the signed-in person's CAIL allowance.
-  async callCail(prompt, settings, maxTokens) {
+  async callCail(prompt, settings, maxTokens, options = {}) {
     let response;
     try {
       response = await fetch('api/generate', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ prompt, maxTokens, model: settings.model })
+        body: JSON.stringify({ prompt, maxTokens, model: settings.model, reasoning: options.reasoning === true })
       });
     } catch (error) {
       throw new Error('Network error: unable to reach LanGames. Check your connection and try again.');
@@ -416,8 +429,9 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
   },
 
   // Call LLM API
-  async callLLM(prompt, settings, maxTokens = 4000) {
-    if (settings.provider === 'cail') return this.callCail(prompt, settings, maxTokens);
+  // options.reasoning: this section needs the model to think (see callCail).
+  async callLLM(prompt, settings, maxTokens = 4000, options = {}) {
+    if (settings.provider === 'cail') return this.callCail(prompt, settings, maxTokens, options);
 
     const headers = {
       'Content-Type': 'application/json'

@@ -1,0 +1,121 @@
+{
+  "object": "list",
+  "data": [
+    {
+      "id": "gpt-oss-120b",
+      "object": "model",
+      "recommended": true,
+      "tier": "recommended",
+      "order": 5,
+      "status": "active",
+      "modality": "text",
+      "provider": "workers-ai",
+      "upstream_model": "gpt-oss-120b",
+      "pricing_known": "catalog",
+      "streaming": true,
+      "sunset": null,
+      "capabilities": [
+        "text-generation",
+        "function-calling",
+        "reasoning",
+        "structured-output"
+      ],
+      "context_length": 128000,
+      "registry_url": null,
+      "name": "GPT OSS 120B",
+      "task": "Text Generation"
+    },
+    {
+      "id": "glm-4.7",
+      "object": "model",
+      "recommended": false,
+      "tier": "advanced",
+      "order": 18,
+      "status": "active",
+      "modality": "text",
+      "provider": "bedrock-mantle",
+      "upstream_model": "glm-4.7",
+      "pricing_known": "catalog",
+      "streaming": true,
+      "sunset": null,
+      "capabilities": [
+        "text-generation",
+        "function-calling",
+        "structured-output",
+        "reasoning"
+      ],
+      "context_length": 204800,
+      "registry_url": null,
+      "name": "GLM-4.7",
+      "task": "Text Generation"
+    },
+    {
+      "id": "deepseek-v4-flash-0731",
+      "object": "model",
+      "recommended": true,
+      "tier": "recommended",
+      "order": 1,
+      "status": "active",
+      "modality": "text",
+      "provider": "workers-ai",
+      "upstream_model": "deepseek-v4-flash-0731",
+      "pricing_known": "catalog",
+      "streaming": true,
+      "sunset": null,
+      "capabilities": [
+        "text-generation",
+        "function-calling",
+        "reasoning"
+      ],
+      "context_length": 1310720,
+      "registry_url": null,
+      "name": "DeepSeek V4 Flash 0731",
+      "task": "Text Generation"
+    },
+    {
+      "id": "whisper-large-v3-turbo",
+      "object": "model",
+      "recommended": true,
+      "tier": "recommended",
+      "order": 8,
+      "status": "active",
+      "modality": "text",
+      "provider": "workers-ai",
+      "upstream_model": "whisper-large-v3-turbo",
+      "pricing_known": "catalog",
+      "streaming": false,
+      "sunset": null,
+      "capabilities": [
+        "automatic-speech-recognition"
+      ],
+      "context_length": null,
+      "registry_url": null,
+      "name": "Whisper Large V3 Turbo",
+      "task": "Automatic Speech Recognition"
+    },
+    {
+      "id": "mistral-large-3-675b-instruct",
+      "object": "model",
+      "recommended": true,
+      "tier": "recommended",
+      "order": 7,
+      "status": "active",
+      "modality": "text",
+      "provider": "bedrock-mantle",
+      "upstream_model": "mistral-large-3-675b-instruct",
+      "pricing_known": "catalog",
+      "streaming": true,
+      "sunset": null,
+      "capabilities": [
+        "text-generation",
+        "vision",
+        "function-calling",
+        "structured-output"
+      ],
+      "context_length": 256000,
+      "registry_url": null,
+      "name": "Mistral Large 3",
+      "task": "Text Generation"
+    }
+  ]
+}

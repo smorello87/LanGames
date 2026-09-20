@@ -400,14 +400,29 @@
       document.getElementById('cailPanel').hidden = false;
       document.getElementById('configHeading').textContent = 'CUNY AI Lab Models';
 
+      // The list is CAIL Gateway's live catalog, already in the Gateway's order.
       const select = document.getElementById('cail-model');
-      select.replaceChildren(...info.models.map(model => {
-        const option = document.createElement('option');
-        option.value = model.id;
-        option.textContent = model.label;
-        return option;
-      }));
+      const group = (label, models) => {
+        const optgroup = document.createElement('optgroup');
+        optgroup.label = label;
+        optgroup.append(...models.map(model => {
+          const option = document.createElement('option');
+          option.value = model.id;
+          option.textContent = model.label;
+          return option;
+        }));
+        return optgroup;
+      };
+      const recommended = info.models.filter(model => model.recommended);
+      const others = info.models.filter(model => !model.recommended);
+      select.replaceChildren(
+        ...(recommended.length ? [group('Recommended', recommended)] : []),
+        ...(others.length ? [group('More models', others)] : [])
+      );
       select.value = LLMConfig.getCailModel(info);
+      if (info.catalogLive === false) {
+        showAlert('warning', 'The CUNY AI Lab model list could not be loaded, so only the default model is offered. Reload to try again.');
+      }
 
       refreshCailQuota();
     }

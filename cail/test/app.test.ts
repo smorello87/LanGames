@@ -1,10 +1,11 @@
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { createTestIdentityIssuer, TEST_SUBJECTS, type TestIdentityIssuer } from "@cuny-ai-lab/cail-identity/testing";
 import { quotaSnapshotBody } from "@cuny-ai-lab/cail-client/testing";
 import app from "../src/app";
 import type { Env } from "../src/env";
 import { APP_AUDIENCE, LAUNCH_PATH } from "../src/identity";
-import { DEFAULT_MODEL } from "../src/models";
+import { FALLBACK_MODEL, REASONING_HEADROOM_TOKENS, REASONING_WANTED_HEADROOM_TOKENS, resetModelCache } from "../src/models";
+import catalogFixture from "./catalog.fixture.json";
 
 // Real: Hono app, CAIL Identity verification against a real signing key, the
 // CAIL Client. Substituted: the Gateway service binding, KV, and the asset
@@ -16,6 +17,19 @@ let issuer: TestIdentityIssuer;
 beforeAll(async () => {
   issuer = await createTestIdentityIssuer();
 });
+
+beforeEach(() => resetModelCache());
+
+// Five real rows copied from the live catalog on 2026-09-20: two recommended
+// reasoning models, recommended non-reasoning Mistral, one advanced, and Whisper, which must never reach the dropdown.
+const DEFAULT_MODEL = "deepseek-v4-flash-0731";
+const isCatalog = (request: Request) => new URL(request.url).pathname === "/v1/catalog";
+const chatCalls = (gateway: { calls: Request[] }) => gateway.calls.filter((call) => !isCatalog(call));
+
+/** A Gateway that serves the catalog itself and hands every other call on. */
+function gatewayWithCatalog(handler: (request: Request) => Response | Promise<Response>) {
+  return fakeGateway((request) => (isCatalog(request) ? Response.json(catalogFixture) : handler(request)));
+}
 
 function memoryKv(): KVNamespace {
   const data = new Map<string, string>();
@@ -79,17 +93,17 @@ function post(path: string, body: unknown, headers: Record<string, string>): Req
   });
 }
 
-const noGateway = fakeGateway(() => new Response("unexpected", { status: 500 }));
+const noGateway = gatewayWithCatalog(() => new Response("unexpected", { status: 500 }));
 
 describe("identity boundary", () => {
   it("answers an anonymous API call with 401 and the launch path, before any model call", async () => {
-    const gateway = fakeGateway(() => chatCompletion("[]"));
+    const gateway = gatewayWithCatalog(() => chatCompletion("[]"));
     const response = await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 10 }, {}), env(gateway));
     expect(response.status).toBe(401);
     const body = (await response.json()) as { error: { code: string; launch: string } };
     expect(body.error.code).toBe("authentication_required");
     expect(body.error.launch).toBe(LAUNCH_PATH);
-    expect(gateway.calls).toHaveLength(0);
+    expect(chatCalls(gateway)).toHaveLength(0);
   });
 
   it("refuses an app leg minted for another tool", async () => {
@@ -118,9 +132,24 @@ describe("identity boundary", () => {
   it("tells a signed-in browser it is in CAIL mode", async () => {
     const response = await app.fetch(new Request(`${ORIGIN}/langames/api/session`, { headers: await legs() }), env(noGateway));
     expect(response.status).toBe(200);
-    const body = (await response.json()) as { cail: boolean; defaultModel: string; models: { id: string }[] };
+    const body = (await response.json()) as { cail: boolean; defaultModel: string; catalogLive: boolean; models: { id: string; label: string; recommended: boolean }[] };
     expect(body.cail).toBe(true);
-    expect(body.models.map((m) => m.id)).toContain(body.defaultModel);
+    expect(body.catalogLive).toBe(true);
+    // The Gateway's own order, text models only, its top recommendation first.
+    expect(body.models.map((m) => m.id)).toEqual(["deepseek-v4-flash-0731", "gpt-oss-120b", "mistral-large-3-675b-instruct", "glm-4.7"]);
+    expect(body.models.map((m) => m.recommended)).toEqual([true, true, true, false]);
+    // The internal reasoning flag is policy for the Worker, not for the page.
+    expect(body.models[0]).not.toHaveProperty("reasoning");
+    expect(body.defaultModel).toBe("deepseek-v4-flash-0731");
+  });
+
+  it("still offers one model, and says so, when the catalog cannot be read", async () => {
+    const down = fakeGateway((request) => (isCatalog(request) ? new Response("nope", { status: 503 }) : chatCompletion('["amore"]')));
+    const headers = await legs();
+    const session = await app.fetch(new Request(`${ORIGIN}/langames/api/session`, { headers }), env(down));
+    expect(await session.json()).toMatchObject({ cail: true, catalogLive: false, defaultModel: FALLBACK_MODEL.id, models: [{ id: FALLBACK_MODEL.id, label: FALLBACK_MODEL.label, recommended: true }] });
+    const generated = await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 10 }, headers), env(down));
+    expect(generated.status).toBe(200);
   });
 });
 
@@ -139,14 +168,14 @@ describe("quota", () => {
 
 describe("generate", () => {
   it("makes one Gateway call with the person's own gateway leg and the pinned system message", async () => {
-    const gateway = fakeGateway(() => chatCompletion('["amore"]'));
+    const gateway = gatewayWithCatalog(() => chatCompletion('["amore"]'));
     const headers = await legs();
     const response = await app.fetch(post("/langames/api/generate", { prompt: "five-letter words", maxTokens: 500 }, headers), env(gateway));
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ text: '["amore"]', truncated: false, model: DEFAULT_MODEL });
 
-    expect(gateway.calls).toHaveLength(1);
-    const call = gateway.calls[0]!;
+    expect(chatCalls(gateway)).toHaveLength(1);
+    const call = chatCalls(gateway)[0]!;
     expect(new URL(call.url).pathname).toBe("/v1/chat/completions");
     // The CAIL Client presents a JWT credential in this header, never as a
     // Bearer token, and it must be the gateway leg rather than the app leg.
@@ -155,17 +184,51 @@ describe("generate", () => {
     expect(call.headers.get("x-cail-app")).toBe("langames");
     const sent = (await call.json()) as { model: string; max_tokens: number; messages: { role: string; content: string }[] };
     expect(sent.model).toBe(DEFAULT_MODEL);
-    expect(sent.max_tokens).toBe(500);
+    expect(sent.max_tokens).toBe(500 + REASONING_HEADROOM_TOKENS);
     expect(sent.messages.map((m) => m.role)).toEqual(["system", "user"]);
     expect(sent.messages[1]!.content).toBe("five-letter words");
   });
 
-  it("rejects a model outside the server-owned list without calling the Gateway", async () => {
-    const gateway = fakeGateway(() => chatCompletion("x"));
-    const response = await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 10, model: "openai/gpt-5.4" }, await legs()), env(gateway));
+  it("gives a reasoning model headroom and the thinking switches, by the catalog's flag", async () => {
+    const gateway = gatewayWithCatalog(() => chatCompletion('["amore"]'));
+    await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 500, model: "gpt-oss-120b" }, await legs()), env(gateway));
+    const sent = (await chatCalls(gateway)[0]!.json()) as Record<string, unknown>;
+    expect(sent.max_tokens).toBe(500 + REASONING_HEADROOM_TOKENS);
+    expect(sent.reasoning_effort).toBe("low");
+    expect(sent.chat_template_kwargs).toEqual({ enable_thinking: false });
+  });
+
+  it("leaves thinking on, with more room, when the section asks for reasoning", async () => {
+    const gateway = gatewayWithCatalog(() => chatCompletion('["amore"]'));
+    await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 500, model: "gpt-oss-120b", reasoning: true }, await legs()), env(gateway));
+    const sent = (await chatCalls(gateway)[0]!.json()) as Record<string, unknown>;
+    expect(sent.max_tokens).toBe(500 + REASONING_WANTED_HEADROOM_TOKENS);
+    expect(sent).not.toHaveProperty("reasoning_effort");
+    expect(sent).not.toHaveProperty("chat_template_kwargs");
+  });
+
+  it("rejects a reasoning flag that is not a boolean", async () => {
+    const gateway = gatewayWithCatalog(() => chatCompletion("x"));
+    const response = await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 10, reasoning: "yes" }, await legs()), env(gateway));
+    expect(response.status).toBe(400);
+    expect(chatCalls(gateway)).toHaveLength(0);
+  });
+
+  it("sends a non-reasoning model nothing extra: the switches make one refuse the call", async () => {
+    const gateway = gatewayWithCatalog(() => chatCompletion('["amore"]'));
+    await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 500, model: "mistral-large-3-675b-instruct" }, await legs()), env(gateway));
+    const sent = (await chatCalls(gateway)[0]!.json()) as Record<string, unknown>;
+    expect(sent.max_tokens).toBe(500);
+    expect(sent).not.toHaveProperty("reasoning_effort");
+    expect(sent).not.toHaveProperty("chat_template_kwargs");
+  });
+
+  it("rejects a model that is not in the Gateway catalog without a model call", async () => {
+    const gateway = gatewayWithCatalog(() => chatCompletion("x"));
+    const response = await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 10, model: "whisper-large-v3-turbo" }, await legs()), env(gateway));
     expect(response.status).toBe(400);
     expect(((await response.json()) as { error: { code: string } }).error.code).toBe("model_not_allowed");
-    expect(gateway.calls).toHaveLength(0);
+    expect(chatCalls(gateway)).toHaveLength(0);
   });
 
   it.each([
@@ -174,14 +237,14 @@ describe("generate", () => {
     ["an oversized token budget", { prompt: "x", maxTokens: 100000 }],
     ["a non-integer token budget", { prompt: "x", maxTokens: 1.5 }],
   ])("rejects %s without calling the Gateway", async (_label, body) => {
-    const gateway = fakeGateway(() => chatCompletion("x"));
+    const gateway = gatewayWithCatalog(() => chatCompletion("x"));
     const response = await app.fetch(post("/langames/api/generate", body, await legs()), env(gateway));
     expect(response.status).toBe(400);
-    expect(gateway.calls).toHaveLength(0);
+    expect(chatCalls(gateway)).toHaveLength(0);
   });
 
   it("passes a quota denial through as non-retryable and does not retry", async () => {
-    const gateway = fakeGateway(() =>
+    const gateway = gatewayWithCatalog(() =>
       // `param` is required for the CAIL Client to read this as a CAIL envelope.
       Response.json({ error: { code: "quota_exceeded", type: "quota", message: "Monthly allowance reached", param: null, retry: false } }, { status: 429, headers: { "x-should-retry": "false" } }),
     );
@@ -190,11 +253,11 @@ describe("generate", () => {
     expect(response.headers.get("x-should-retry")).toBe("false");
     const body = (await response.json()) as { error: { code: string; retryable: boolean } };
     expect(body.error).toMatchObject({ code: "quota_exceeded", retryable: false });
-    expect(gateway.calls).toHaveLength(1);
+    expect(chatCalls(gateway)).toHaveLength(1);
   });
 
   it("reports a reasoning model that spent its whole budget as 422, not as empty success", async () => {
-    const gateway = fakeGateway(() => chatCompletion("", "length"));
+    const gateway = gatewayWithCatalog(() => chatCompletion("", "length"));
     const response = await app.fetch(post("/langames/api/generate", { prompt: "x", maxTokens: 10 }, await legs()), env(gateway));
     expect(response.status).toBe(422);
     expect(((await response.json()) as { error: { code: string } }).error.code).toBe("model_output_truncated");

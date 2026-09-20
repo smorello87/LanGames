@@ -38,14 +38,55 @@ Students play from a teacher's share link without signing in; only generating
 and storing content need a CAIL session. That split is the one policy choice
 here that Doorway's maintainers should confirm.
 
-`POST /langames/api/generate` takes `{ prompt, maxTokens, model? }`. The server
+`POST /langames/api/generate` takes `{ prompt, maxTokens, model?, reasoning? }`. The server
 pins the system message, bounds the prompt (8000 characters) and the output
-budget (8192 tokens), and accepts only the models in `src/models.ts`. The
-browser builds the section prompts, exactly as it does for the other
-deployments, so there is one set of prompts to maintain.
+budget (8192 tokens), and accepts only a model in the Gateway's current
+catalog. The browser builds the section prompts, exactly as it does for the
+other deployments, so there is one set of prompts to maintain.
 
-This page never stores or sends a provider key: the origin is shared with every
-other CAIL tool, and the page's `connect-src 'self'` policy enforces it.
+## Models come from the Gateway
+
+There is no model list in this repository. `GET /langames/api/session` returns
+CAIL Gateway's live catalog (`getCatalogSnapshot`), narrowed to active models
+with the `text-generation` capability, in the Gateway's own `order`, and the
+page groups them by the Gateway's `recommended` flag. The default is the
+Gateway's first recommended text model. The narrowing matters: the catalog also
+marks Whisper as recommended. The list is cached per isolate for a minute; if
+the catalog cannot be read, one fallback model is offered and the page says so.
+
+### Reasoning models
+
+Most of the catalog reasons before it answers, and reasoning is billed as
+output. Measured against the live Gateway on 2026-09-20, **six of the seven
+recommended models returned nothing** for the 500-token Wordle request: the
+whole budget went on hidden reasoning. `reasoningPolicy` in `src/models.ts`
+handles this from the catalog's `reasoning` capability, with no model names:
+
+- reasoning models get 4000 tokens of headroom on top of what the section asked
+  for, which is what made all six answer. Only produced tokens are charged.
+  More is worse: at 8500 one model reasoned past a two-minute timeout.
+- they are also sent `enable_thinking: false` and `reasoning_effort: "low"`.
+  These are an economy, not the fix: some models honor one, some neither.
+- a non-reasoning model is sent neither. One answered them with
+  `400 capability_unsupported`.
+- a call can ask to keep the thinking: `{ reasoning: true }`, which drops the
+  switches and gives 8000 tokens of headroom. Only the Wordle section's one
+  automatic retry asks. Counting letters is where the models differ most, and
+  no single setting suits them all: with thinking off, most return a full valid
+  list in seconds, but the default model gave 6, 9 and 16 valid Russian words
+  of 30; with thinking on it gave 30 of 30 in five runs of six, while three
+  other models ran out of room or timed out. So the first attempt is the cheap
+  one and only the retry thinks. Observed through the app: two models passed
+  first time in 9 and 18 seconds and never escalated; the default model failed,
+  escalated, and that time still ran out of room after 111 seconds.
+
+**Known limits, measured 2026-09-20.** A full Spanish set on the default model
+took 31 seconds with no failed section. Wordle in a non-Latin script is the
+weak point: on the default model it is improved but not reliable, and the app's
+"retry failed sections" and the model dropdown are the recourse. One
+recommended model (Kimi K2.6) honors neither switch, takes 90 to 230 seconds a
+section and failed Wordle every time. Timings from runs with more than six
+concurrent calls are not meaningful: browsers cap connections per host.
 
 ## Develop
 

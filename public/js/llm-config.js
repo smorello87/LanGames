@@ -39,7 +39,7 @@ const LLMConfig = {
           if (!response.ok) return { cail: false };
           const body = await response.json().catch(() => null);
           if (!body || body.cail !== true || !Array.isArray(body.models)) return { cail: false };
-          return { cail: true, models: body.models, defaultModel: body.defaultModel };
+          return { cail: true, models: body.models, defaultModel: body.defaultModel, catalogLive: body.catalogLive };
         })
         .catch(() => ({ cail: false }));
     }

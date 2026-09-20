@@ -6,7 +6,7 @@ import { BASE_PATH, canonicalOrigin, type Env } from "./env";
 import { authenticate, type Principal } from "./identity";
 import { originAllowed } from "./csrf";
 import { appErrorFrom, appErrorResponse, gatewayClient, readChatCompletion, type AppError, type ChatCompletionResult } from "./gateway";
-import { DEFAULT_MODEL, MAX_OUTPUT_TOKENS, MAX_PROMPT_CHARS, MODELS, SYSTEM_PROMPT, isAllowedModel } from "./models";
+import { MAX_OUTPUT_TOKENS, MAX_PROMPT_CHARS, SYSTEM_PROMPT, loadModels, reasoningPolicy } from "./models";
 import { checkConfigurationReadiness } from "./readiness";
 
 export interface AppVariables {
@@ -106,8 +106,13 @@ api.use("*", async (c, next) => {
   await next();
 });
 
-// The frontend's mode probe: 200 here means "generate through CAIL".
-api.get("/session", (c) => c.json({ cail: true, models: MODELS, defaultModel: DEFAULT_MODEL }));
+// The frontend's mode probe: 200 here means "generate through CAIL". The
+// model list is the Gateway's live catalog, in the Gateway's own order.
+api.get("/session", async (c) => {
+  const { models, defaultModel, live } = await loadModels(gatewayClient(c.env, c.get("correlation")));
+  const options = models.map(({ id, label, recommended }) => ({ id, label, recommended }));
+  return c.json({ cail: true, models: options, defaultModel, catalogLive: live });
+});
 
 api.get("/quota", async (c) => {
   try {
@@ -176,11 +181,16 @@ api.post("/generate", async (c) => {
   if (typeof maxTokens !== "number" || !Number.isInteger(maxTokens) || maxTokens < 1 || maxTokens > MAX_OUTPUT_TOKENS) {
     return fail(c, invalid(`maxTokens must be an integer from 1 to ${MAX_OUTPUT_TOKENS}.`));
   }
-  const model = fields.model === undefined ? DEFAULT_MODEL : fields.model;
-  if (!isAllowedModel(model)) {
-    return fail(c, { code: "model_not_allowed", message: "That model is not available in LanGames.", status: 400, retryable: false });
+  if (fields.reasoning !== undefined && typeof fields.reasoning !== "boolean") return fail(c, invalid("reasoning must be a boolean."));
+  const offered = await loadModels(gatewayClient(c.env, c.get("correlation")));
+  const requested = fields.model === undefined ? offered.defaultModel : fields.model;
+  const option = offered.models.find((m) => m.id === requested);
+  if (option === undefined) {
+    return fail(c, { code: "model_not_allowed", message: "That model is not in the CUNY AI Lab catalog right now. Reload and pick another.", status: 400, retryable: false });
   }
 
+  const model = option.id;
+  const policy = reasoningPolicy(option, fields.reasoning === true);
   const signal = c.req.raw.signal;
   let completion: ChatCompletionResult;
   try {
@@ -188,8 +198,9 @@ api.post("/generate", async (c) => {
       {
         model,
         stream: false,
-        max_tokens: maxTokens,
+        max_tokens: maxTokens + policy.headroom,
         temperature: 0.7,
+        ...policy.extraBody,
         messages: [
           { role: "system", content: SYSTEM_PROMPT },
           { role: "user", content: prompt },
