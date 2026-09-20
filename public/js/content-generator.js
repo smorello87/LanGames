@@ -77,7 +77,7 @@ const ContentGenerator = {
 
   // Run sections concurrently; one retry each; report progress as sections settle
   async generateSections(keys, language, difficulty, progressCallback) {
-    const settings = LLMConfig.getSettings();
+    const settings = await LLMConfig.getActiveSettings();
     if (!settings) {
       throw new Error('LLM settings not configured. Please configure settings first.');
     }
@@ -100,6 +100,12 @@ const ContentGenerator = {
         report();
         return { key, value };
       } catch (firstError) {
+        // A refusal the server marked final (allowance used up, model not
+        // allowed) would only fail again, and on CAIL would spend again.
+        if (firstError.noRetry) {
+          report();
+          throw Object.assign(new Error(firstError.message), { sectionKey: key });
+        }
         console.warn(`Section ${key} failed, retrying once:`, firstError.message);
         try {
           const value = await this.generateSection(key, language, difficulty, settings);
@@ -363,8 +369,55 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
     }
   },
 
+  // Pull the JSON payload out of a model reply. Models wrap JSON in code
+  // fences, prepend a sentence, or emit a <think> block first; take the
+  // outermost array or object rather than trusting the reply to be bare.
+  extractJSON(text) {
+    let content = String(text).replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
+    const fenced = content.match(/```(?:json)?\s*([\s\S]*?)```/i);
+    if (fenced) content = fenced[1].trim();
+    const starts = [content.indexOf('['), content.indexOf('{')].filter(i => i !== -1);
+    if (starts.length === 0) return content;
+    const start = Math.min(...starts);
+    const end = content.lastIndexOf(content[start] === '[' ? ']' : '}');
+    return end > start ? content.slice(start, end + 1) : content.slice(start);
+  },
+
+  // Generate through the CUNY AI Lab deployment's own Worker. It holds no key:
+  // the call is charged to the signed-in person's CAIL allowance.
+  async callCail(prompt, settings, maxTokens) {
+    let response;
+    try {
+      response = await fetch('api/generate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ prompt, maxTokens, model: settings.model })
+      });
+    } catch (error) {
+      throw new Error('Network error: unable to reach LanGames. Check your connection and try again.');
+    }
+
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({}));
+      if (response.status === 401 && LLMConfig.handleLostSession(body)) return new Promise(() => {});
+      const error = body.error || {};
+      const messages = {
+        quota_exceeded: 'You have used your CUNY AI Lab model allowance for this period. It resets automatically; see your Dashboard for the date.',
+        model_output_truncated: 'The model ran out of room before answering. Try a different model.'
+      };
+      const failure = new Error(messages[error.code] || error.message || `HTTP ${response.status}`);
+      failure.noRetry = error.retryable === false && response.status !== 502;
+      throw failure;
+    }
+
+    const data = await response.json();
+    if (!data.text) throw new Error('API returned empty content');
+    return this.extractJSON(data.text);
+  },
+
   // Call LLM API
   async callLLM(prompt, settings, maxTokens = 4000) {
+    if (settings.provider === 'cail') return this.callCail(prompt, settings, maxTokens);
 
     const headers = {
       'Content-Type': 'application/json'
@@ -441,16 +494,7 @@ Return exactly 15 verbs. Adapt the pronoun keys to ${language} if different from
         throw new Error('API returned empty content');
       }
 
-      // Clean up response - remove markdown code blocks if present
-      content = content.trim();
-
-      if (content.startsWith('```json')) {
-        content = content.replace(/```json\n?/, '').replace(/```\s*$/, '');
-      } else if (content.startsWith('```')) {
-        content = content.replace(/```\n?/, '').replace(/```\s*$/, '');
-      }
-
-      return content.trim();
+      return this.extractJSON(content);
 
     } catch (error) {
       console.error('[ContentGenerator] API call failed:', error);

@@ -17,6 +17,72 @@ const LLMConfig = {
     }
   },
 
+  // --- CAIL mode -----------------------------------------------------------
+  // On the CUNY AI Lab deployment (tools.ailab.gc.cuny.edu/langames/) the
+  // Worker generates content through CAIL Gateway on the signed-in person's
+  // own allowance. There is no API key there, and none may be stored: that
+  // origin is shared with every other CAIL tool. Everywhere else the probe
+  // below gets a 404 and the page keeps its bring-your-own-key behavior.
+  CAIL_MODEL_KEY: 'langames-cail-model',
+  _cail: null,
+
+  // Resolves to { cail: false } or { cail: true, models, defaultModel }.
+  detectCail() {
+    if (!this._cail) {
+      this._cail = fetch('api/session', { headers: { Accept: 'application/json' } })
+        .then(async (response) => {
+          if (response.status === 401) {
+            const body = await response.json().catch(() => ({}));
+            if (this.handleLostSession(body)) return new Promise(() => {});
+            return { cail: false };
+          }
+          if (!response.ok) return { cail: false };
+          const body = await response.json().catch(() => null);
+          if (!body || body.cail !== true || !Array.isArray(body.models)) return { cail: false };
+          return { cail: true, models: body.models, defaultModel: body.defaultModel };
+        })
+        .catch(() => ({ cail: false }));
+    }
+    return this._cail;
+  },
+
+  // A lost CAIL session is recovered by a full-page navigation to the tool's
+  // own launch path. Never fetch the login URL or retry the request.
+  handleLostSession(body) {
+    const error = body && body.error;
+    const lost = error && (error.code === 'authentication_required' || error.code === 'session_invalid');
+    if (!lost || typeof error.launch !== 'string' || !error.launch.startsWith('/launch/')) return false;
+    window.location.assign(error.launch);
+    return true;
+  },
+
+  getCailModel(info) {
+    const ids = info.models.map(m => m.id);
+    let stored = null;
+    try { stored = localStorage.getItem(this.CAIL_MODEL_KEY); } catch (e) { /* storage unavailable */ }
+    return ids.includes(stored) ? stored : info.defaultModel;
+  },
+
+  setCailModel(model) {
+    try { localStorage.setItem(this.CAIL_MODEL_KEY, model); } catch (e) { /* storage unavailable */ }
+  },
+
+  async getCailQuota() {
+    const response = await fetch('api/quota', { headers: { Accept: 'application/json' } });
+    if (response.status === 401 && this.handleLostSession(await response.json().catch(() => ({})))) {
+      return new Promise(() => {});
+    }
+    if (!response.ok) return null;
+    return response.json().catch(() => null);
+  },
+
+  // Settings for the active mode: CAIL when detected, else the stored key.
+  async getActiveSettings() {
+    const info = await this.detectCail();
+    if (info.cail) return { provider: 'cail', model: this.getCailModel(info) };
+    return this.getSettings();
+  },
+
   // Get current settings from localStorage
   getSettings() {
     const stored = localStorage.getItem(this.STORAGE_KEY);
@@ -46,6 +112,9 @@ const LLMConfig = {
   validateSettings(settings) {
     if (!settings || !settings.provider) {
       return { valid: false, error: 'Provider is required' };
+    }
+    if (settings.provider === 'cail') {
+      return settings.model ? { valid: true } : { valid: false, error: 'Model selection is required' };
     }
     if (!settings.endpoint) {
       return { valid: false, error: 'API endpoint is required' };

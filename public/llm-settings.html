@@ -69,7 +69,20 @@
          SECTION 1: API Configuration
          ========================= -->
     <section class="settings-section">
-      <h3>API Configuration</h3>
+      <h3 id="configHeading">API Configuration</h3>
+
+      <!-- CUNY AI Lab mode: shown only when the server generates through CAIL
+           Gateway on the signed-in person's allowance (see LLMConfig.detectCail) -->
+      <div id="cailPanel" hidden>
+        <p class="settings-section-description">You are signed in through the CUNY AI Lab. Content is generated with the Lab's open-weight models and counts against your own model allowance. No API key is needed.</p>
+        <div class="alert alert-info" id="cailQuota" aria-live="polite">Checking your allowance…</div>
+        <div class="form-group">
+          <label for="cail-model">Model</label>
+          <select id="cail-model" onchange="LLMConfig.setCailModel(this.value)"></select>
+        </div>
+      </div>
+
+      <div id="byoConfig">
       <p class="settings-section-description">Configure your LLM provider settings. Your API keys are stored only in your browser's local storage and never sent to our servers.</p>
 
       <!-- Security Warning -->
@@ -142,6 +155,7 @@
         <button type="button" class="btn-primary" onclick="saveSettings()">Save Settings</button>
         <button type="button" class="btn-secondary" onclick="clearAPISettings()">Clear Settings</button>
       </div>
+      </div><!-- /#byoConfig -->
     </section>
 
     <!-- =========================
@@ -328,7 +342,7 @@
   </footer>
 
   <!-- Load JavaScript modules -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" integrity="sha512-Q4c02RVMHmH2cCbz+X8ZNycTaxSQy6cvwN0W5X5cdHFuSmPnPnXL3wBBX3lbXcuP0p+W9pX4BOjHDEStPSE9HA==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/lz-string/1.5.0/lz-string.min.js" integrity="sha512-qtX0GLM3qX8rxJN1gyDfcnMFFrKvixfoEOwbBib9VafR5vbChV5LeE5wSI/x+IlCkTY5ZFddFDCCfaVJJNnuKQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   <script src="js/llm-config.js" defer></script>
   <script src="js/content-generator.js" defer></script>
   <script src="js/gcl-1761141656.js" defer></script>
@@ -342,6 +356,7 @@
 
     // Initialize page on load
     window.addEventListener('DOMContentLoaded', () => {
+      initCailMode();
       loadExistingSettings();
       setupTabListeners();
       populateDefaultEndpoints();
@@ -367,6 +382,48 @@
       }
 
       return true;
+    }
+
+    // ===========================
+    // CUNY AI Lab mode
+    // ===========================
+
+    let cailMode = false;
+
+    async function initCailMode() {
+      if (typeof LLMConfig === 'undefined') return;
+      const info = await LLMConfig.detectCail();
+      if (!info.cail) return;
+      cailMode = true;
+
+      document.getElementById('byoConfig').hidden = true;
+      document.getElementById('cailPanel').hidden = false;
+      document.getElementById('configHeading').textContent = 'CUNY AI Lab Models';
+
+      const select = document.getElementById('cail-model');
+      select.replaceChildren(...info.models.map(model => {
+        const option = document.createElement('option');
+        option.value = model.id;
+        option.textContent = model.label;
+        return option;
+      }));
+      select.value = LLMConfig.getCailModel(info);
+
+      refreshCailQuota();
+    }
+
+    // The Gateway's quota figure is a delayed estimate, so say so.
+    async function refreshCailQuota() {
+      const box = document.getElementById('cailQuota');
+      const quota = await LLMConfig.getCailQuota().catch(() => null);
+      // The snapshot is in microdollars: { unit: 'microdollar', limit, estimated_used }.
+      const used = quota && quota.unit === 'microdollar' ? quota.estimated_used / 1e6 : NaN;
+      const limit = quota && quota.unit === 'microdollar' ? quota.limit / 1e6 : NaN;
+      if (!Number.isFinite(used) || !Number.isFinite(limit)) {
+        box.textContent = 'Your allowance could not be checked right now. You can still generate content.';
+        return;
+      }
+      box.textContent = `Model allowance: about $${used.toFixed(2)} of $${limit.toFixed(2)} used this period (estimate, updates with a delay).`;
     }
 
     // ===========================
@@ -546,7 +603,7 @@
     async function generateContent() {
       if (!verifyModules()) return;
 
-      const settings = LLMConfig.getSettings();
+      const settings = await LLMConfig.getActiveSettings();
       if (!settings) {
         showAlert('error', 'Please configure your API settings first (Section 1 above).');
         return;
@@ -559,7 +616,7 @@
 
       const confirmed = confirm(
         `Generate new content for ${selectedLanguage} (${selectedDifficulty} level)?\n\n` +
-        `This usually takes under a minute and uses API credits.\n` +
+        `This usually takes under a minute and uses ${cailMode ? 'a few cents of your CUNY AI Lab model allowance' : 'API credits'}.\n` +
         `Any existing content will be replaced.`
       );
 

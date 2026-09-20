@@ -1,0 +1,24 @@
+{
+  "name": "cail-langames",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "wrangler dev",
+    "deploy": "wrangler deploy --strict",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@cuny-ai-lab/cail-client": "6.2.2",
+    "@cuny-ai-lab/cail-identity": "5.2.6",
+    "@cuny-ai-lab/cail-log": "0.6.4",
+    "hono": "4.12.34"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "5.20260804.1",
+    "typescript": "5.9.3",
+    "vitest": "3.2.7",
+    "wrangler": "4.121.0"
+  }
+}
