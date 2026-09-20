@@ -276,7 +276,9 @@ const GameContentLoader = {
   // Store content on server (primary sharing method - returns short ID)
   async storeContentOnServer(content) {
     try {
-      const storeURL = '/api/store-content';
+      // Relative, so the same code works at a site root and under a mount
+      // prefix such as /langames/ (every page lives in one directory).
+      const storeURL = 'api/store-content';
 
       const response = await fetch(storeURL, {
         method: 'POST',
@@ -308,7 +310,7 @@ const GameContentLoader = {
   // Load content from server by ID
   async loadContentFromServer(id) {
     try {
-      const getURL = '/api/get-content?id=' + encodeURIComponent(id);
+      const getURL = 'api/get-content?id=' + encodeURIComponent(id);
 
       const response = await fetch(getURL);
       if (!response.ok) {

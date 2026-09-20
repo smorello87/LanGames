@@ -1,0 +1,35 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  // The CAIL build of LanGames: the same public/ frontend as the Kale and PHP
+  // deployments, mounted by CAIL Doorway at tools.ailab.gc.cuny.edu/langames/.
+  // Generation runs here, through CAIL Gateway, on the signed-in person's quota.
+  "name": "cail-langames",
+  "account_id": "452c33847cf5cb1e46f391fca32fd1b5",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-03-25",
+  "compatibility_flags": ["nodejs_compat", "enable_request_signal", "request_signal_passthrough"],
+  // Reached only through Doorway's service binding; no public hostname.
+  "workers_dev": false,
+  "preview_urls": false,
+  "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } },
+  "version_metadata": { "binding": "CF_VERSION_METADATA" },
+  "assets": {
+    "directory": "../public",
+    "binding": "ASSETS",
+    "run_worker_first": true,
+    "html_handling": "auto-trailing-slash",
+    "not_found_handling": "none"
+  },
+  "services": [{ "binding": "GATEWAY", "service": "cail-model-api" }],
+  // Shared content behind ?id= links. Create with
+  // `wrangler kv namespace create cail-langames-content` and paste the id.
+  "kv_namespaces": [{ "binding": "CACHE", "id": "REPLACE_WITH_KV_NAMESPACE_ID" }],
+  "exports": { "LanGamesReadiness": { "type": "worker" } },
+  // CAIL_IDENTITY_JWKS is a Worker secret (Doorway's public JWKS), not a var.
+  "vars": {
+    "CAIL_API_BASE": "https://tools.ailab.gc.cuny.edu",
+    "CAIL_IDENTITY_ISSUER": "https://tools.ailab.gc.cuny.edu/cail-sso",
+    "CAIL_CANONICAL_ORIGIN": "https://tools.ailab.gc.cuny.edu",
+    "CAIL_REQUIRE_IDENTITY": "true"
+  }
+}

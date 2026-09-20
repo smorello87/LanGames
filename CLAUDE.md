@@ -8,12 +8,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **Key Distinction**: This is the `llm-version/` lineage, completely independent from the parent `impariamo/` project. The parent project contains hardcoded Italian games, while LanGames generates dynamic content via AI for any supported language.
 
-### Two Live Deployments (both must stay in sync)
+### Deployments (the shared frontend must stay in sync)
 
 | Deployment | Stack | Source | Deploy method |
 |---|---|---|---|
 | **PRIMARY** — `https://stefanomorello.com/langames` (presented at events) | PHP on Apache shared hosting | `../LanGames-php/` (sibling folder, now git-tracked) | Manual upload |
 | `https://langames.cuny.qzz.io` | Cloudflare Workers, Hono/TypeScript (`src/index.ts`) | this repo (`LanGames/`) | Auto-deploy on push to `main` |
+| **CAIL build** — `https://tools.ailab.gc.cuny.edu/langames/` (not live until the Doorway mount is released) | Cloudflare Worker `cail-langames` (`cail/`), mounted by CAIL Doorway | this repo, `cail/` | Manual, receiver first — see `cail/README.md` |
+
+**CAIL build**: same `public/` frontend, but generation runs server-side through CAIL Gateway on the signed-in person's own model allowance, so there is no API key. The frontend detects it at runtime: `LLMConfig.detectCail()` probes `api/session`; a 200 switches the Settings page to CAIL mode, and the 404 every other deployment returns leaves bring-your-own-key behavior untouched. `cail/` is a separate package on purpose: it depends on the private `@cuny-ai-lab` registry, which the root project (built by Kale on every push) must never need. Never store or send a provider key on the CAIL build: its origin is shared with every other CAIL tool.
 
 The two frontends are near-identical; the only differences are the API endpoint calls (`store-content.php`/`get-content.php` vs `/api/store-content`/`/api/get-content`) and, historically, the model list. When updating shared frontend behavior (games, generation prompts, share flow), check whether the change needs to be ported to `../LanGames-php/` as well.
 
@@ -41,7 +44,9 @@ The two frontends are near-identical; the only differences are the API endpoint 
 ```
 LanGames/
 ├── src/
-│   └── index.ts                  # Hono app: static asset serving + /api/* routes
+│   ├── index.ts                  # Hono app: static asset serving + /api/* routes
+│   └── content-store.ts          # Shared ?id= storage, used by this Worker and cail/
+├── cail/                         # CAIL build: own package.json, wrangler.jsonc, tests (see cail/README.md)
 ├── public/                       # Deployed as Worker static assets
 │   ├── index.html                # Landing page with features/FAQ
 │   ├── llm-settings.html         # API config + content generation (merged hub)
@@ -140,6 +145,8 @@ Sharing has exactly two paths — there is no external URL-shortening service in
 - Fragment fallback: content is LZString-compressed then encoded, appended after `#content=` (NOT a query parameter `?`), to bypass Apache "Request-URI Too Long" errors
   - Fragments are NOT sent to server, only processed by browser JavaScript
   - Legacy plain-Base64 fragments (no LZString prefix) are still decodable for backward compatibility with old share links
+- API URLs in `gcl-1761141656.js` are **relative** (`api/store-content`, not `/api/...`) so the same file works at a site root and under the `/langames/` mount. Keep them relative; every page lives in one directory.
+- The LZString `<script>` carries an SRI hash. A wrong hash makes the browser block the library silently: new fragment links fall back to uncompressed Base64 and `z_` links stop decoding. Check it against `https://api.cdnjs.com/libraries/lz-string/1.5.0?fields=sri` if it is ever touched.
 - URL automatically parsed on page load via `GameContentLoader.initFromURLAsync()` (checks `?id=` first, then `#content=`)
 - Content is saved to student's localStorage for persistent access
 - URL fragment is removed from browser history for clean URLs
